@@ -1,12 +1,178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MittsMods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>Welcome to MittsMods Test Page</h1>
-    <p>Coming soon...</p>
+    <header class="site-header">
+      <nav class="nav">
+        <a hred="index.html" class="nav-logo">MittsMods</a>
+        <ul class="nav-links">
+          <li><a href="index.html" class="active">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="projects.html">Projects</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="hero-tag">Console Modding . Coding . Preservation</span>
+          <h1 class="hero-title">
+            Documenting what I build,<br />
+            break, and learn.
+          </h1>
+          <p class="hero-sub">
+            A running log of console mods, homelab tinkering, and the code that
+            ties it all together. By Dimitri (aka Mitt).
+          </p>
+          <div class="hero-actions">
+            <a href="projects.html" class="btn-primary">View projects</a>
+            <a href="about.html" class="btn-ghost">About Me</a>
+          </div>
+        </div>
+        <div class="hero-decor" aria-hidden="true">
+          <span>RHG3</span>
+          <span>CFW</span>
+          <span>GDEMU</span>
+          <span>Picofly</span>
+          <span>BIOS</span>
+          <span>Homelab</span>
+        </div>
+      </section>
+
+      <!-- Intro strip-->
+      <section class="intro-strip">
+        <div class="intro-strip-inner">
+          <div class="intro-chip">Console Mods</div>
+          <div class="intro-chip">Custom Firmware</div>
+          <div class="intro-chip">Preservation</div>
+          <div class="intro-chip">Servers and Homelab</div>
+          <div class="intro-chip">Code and Scripts</div>
+        </div>
+      </section>
+
+      <!-- About -->
+      <section class="about-snap container">
+        <div class="about-snap-test">
+          <h2>Hi, I'm Dimitri (aka Mitt).</h2>
+          <p>
+            I'm a Perth-based IT student and console modder with a passion for
+            fixing broken and discarded gaming hardware. I started seriously
+            modding in June 2024, though the curiosity goes back to 2015 when I
+            got my first laptop
+          </p>
+          <p>
+            MittsMods is where I share my fixes, builds, and lessons. I'm not
+            here to write perfect guides, but to keep a journal of information
+            that might help someone out.
+          </p>
+          <a href="about.html" class="btn-ghost">More About Me -></a>
+        </div>
+        <div class="about-snap-stats">
+          <div class="stat">
+            <span class="stat-num">3+</span>
+            <span class="stat-label">Builds documented</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">2024</span>
+            <span class="stat-label">Started modding seriously</span>
+          </div>
+          <div class="stat">
+            <span class="stat-num">Perth</span>
+            <span class="stat-label">Based in WA, Australia</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent posts -->
+      <section class="recent container">
+        <div class="section-header">
+          <h2>Recent Activity</h2>
+          <a href="project.html" class="view-all">All Projects -></a>
+        </div>
+
+        <div class="post-list">
+          <article class="post-item">
+            <div class="post-meta">
+              <span class="post-cat cat-mods">Mods / Sega</span>
+              <time>Aug 24, 2025</time>
+            </div>
+            <h3>
+              <a href="#"
+                >My Ultimate Modded VA0 Sega Dreamcast: From Bone Stock to Fully
+                Upgraded</a
+              >
+            </h3>
+            <p>
+              Console: Sega Dreamcast VA0 (NTSC-J HKT-3000). Mods include
+              DreamPSU Rev2.0, GDEMU v5.20.5, and more - the full rundown of
+              everything I did to this machine.
+            </p>
+            <a href="#" class="post-read">Read more -></a>
+          </article>
+
+          <article class="post-item">
+            <div class="post-meta">
+              <span class="post-cat cat-mods">Mods / Microsoft</span>
+              <time>Aug 19, 2025</time>
+            </div>
+            <h3>
+              <a href="#"
+                >Xbox 360 in 2025 is still cool: My RGH3 Corona V3 Build</a
+              >
+            </h3>
+            <p>
+              I transformed a stock Xbox 360 S Corona V3 into a modern console
+              with an RGH3 install, fresh thermal paste, and Aurora/DashLaunch.
+              One of my smoothest mods yet.
+            </p>
+            <a href="#" class="post-read">Read more -></a>
+          </article>
+
+          <article class="post-item">
+            <div class="post-meta">
+              <span class="post-cat cat-mods">Mods / Nintendo</span>
+              <time>Jun 25, 2025</time>
+            </div>
+            <h3>
+              <a href="#"
+                >Switch Lite: Clear Shell, Hall Sticks, and a Picofly modchip
+                (RP2040)</a
+              >
+            </h3>
+            <p>
+              Atomic Purple clear shell, hall effect joysticks, and a PicoFly
+              modchip. What started as a soldering challenge turned into one of
+              my favourite handheld consoles
+            </p>
+            <a href="#" class="post-read">Read more-></a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner container">
+        <span class="footer-logo">MittsMods</span>
+        <p>
+          Perth, WA . Console modding & tinkering .
+          <a href="mailto:mittsmods@outlook.com">mittsmods@outlook.com</a>
+        </p>
+        <p class="footer-copy">
+          Built from scratch and hosted on GitHub Pages.
+        </p>
+      </div>
+    </footer>
   </body>
 </html>
