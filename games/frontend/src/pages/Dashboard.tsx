@@ -14,15 +14,18 @@ export default function Dashboard({ onNavigate }: Props) {
     api.getGames().then(setGames).catch(console.error);
   }, []);
 
-  const slideshowGames = games.filter((g) => g.coverUrl).slice(0, 8);
-  useEffect(() => {
-    if (slideshowGames.length < 2) return;
-    const timer = setInterval(
-      () => setSlide((s) => (s + 1) % slideshowGames.length),
-      4000,
-    );
-    return () => clearInterval(timer);
-  }, [slideshowGames.length]);
+  const slideshowGames = games
+    .filter(
+      (g) =>
+        g.coverUrl &&
+        g.userEntries.some((e) => e.hoursPlayed && e.hoursPlayed > 0),
+    )
+    .sort((a, b) => {
+      const aDate = new Date(a.userEntries[0]?.updatedAt ?? 0).getTime();
+      const bDate = new Date(b.userEntries[0]?.updatedAt ?? 0).getTime();
+      return bDate - aDate;
+    })
+    .slice(0, 8);
 
   const totalGames = games.length;
   const completed = games.filter((g) =>
