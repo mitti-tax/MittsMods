@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MittsModsApi.Data;
+using MittsModsApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,12 @@ builder.Services.AddControllers();
 // SQLite via Entity Framework Core
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// In-memory cache used by IgdbService for token + search result caching
+builder.Services.AddMemoryCache();
+
+// HttpClient + IgdbService
+builder.Services.AddHttpClient<IgdbService>();
 
 // CORS — allow the React frontend to talk to this API
 builder.Services.AddCors(options =>
