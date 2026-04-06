@@ -6,7 +6,7 @@ export type PlayStatus =
   | "Completed"
   | "Dropped"
   | "OnHold";
-export type PlayMode = "Handheld" | "TV" | "Monitor";
+export type PlayMode = "Handheld" | "TV" | "CRT";
 export type HardwareType = "Original" | "Modded" | "Emulator" | "Cloud";
 
 export interface UserEntry {
