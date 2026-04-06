@@ -5,6 +5,9 @@ backend/*.db
 backend/*.db-shm
 backend/*.db-wal
 
+obj/
+bin/
+
 # Secrets — never commit API keys
 backend/appsettings.Development.json
 
