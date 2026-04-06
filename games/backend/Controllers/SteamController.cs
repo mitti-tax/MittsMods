@@ -13,11 +13,13 @@ public class SteamController : ControllerBase
 {
     private readonly SteamService _steam;
     private readonly AppDbContext _db;
+    private readonly IgdbService _igdb;
 
-    public SteamController(SteamService steam, AppDbContext db)
+    public SteamController(SteamService steam, AppDbContext db, IgdbService igdb)
     {
         _steam = steam;
         _db = db;
+        _igdb = igdb;
     }
 
     // -------------------------------------------------------
@@ -74,8 +76,13 @@ public class SteamController : ControllerBase
                 continue;
             }
 
-            // Fetch achievements for this game
-            var achievements = await _steam.GetAchievementsAsync(steamGame.SteamAppId);
+            // Fetch achievements and IGDB metadata in parallel
+            var achievementsTask = _steam.GetAchievementsAsync(steamGame.SteamAppId);
+            var igdbTask = _igdb.SearchAsync(steamGame.Name);
+            await Task.WhenAll(achievementsTask, igdbTask);
+
+            var achievements = achievementsTask.Result;
+            var igdbMatch = igdbTask.Result.FirstOrDefault();
 
             // Determine status based on hours played
             var status = steamGame.HoursPlayed == 0
@@ -84,9 +91,14 @@ public class SteamController : ControllerBase
 
             var game = new Game
             {
-                Title      = steamGame.Name,
-                CoverUrl   = steamGame.CoverUrl,
-                SteamAppId = steamGame.SteamAppId,
+                Title       = steamGame.Name,
+                CoverUrl    = igdbMatch?.CoverUrl ?? steamGame.CoverUrl,
+                Genre       = igdbMatch?.Genres.FirstOrDefault(),
+                ReleaseYear = igdbMatch?.ReleaseYear,
+                Developer   = igdbMatch?.Developers.FirstOrDefault(),
+                Summary     = igdbMatch?.Summary,
+                IgdbId      = igdbMatch?.Id,
+                SteamAppId  = steamGame.SteamAppId,
                 UserEntries = new List<UserEntry>
                 {
                     new UserEntry
