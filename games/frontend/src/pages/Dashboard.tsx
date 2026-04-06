@@ -3,6 +3,7 @@ import { api, type Game } from "../api/client";
 
 interface Props {
   onNavigate: (page: "dashboard" | "games" | "backlog") => void;
+  isLoggedIn: boolean;
 }
 
 export default function Dashboard({ onNavigate }: Props) {
@@ -52,7 +53,7 @@ export default function Dashboard({ onNavigate }: Props) {
             <div className="empty-state">
               <p>NO GAMES LOGGED YET</p>
               <p style={{ fontSize: "11px", marginTop: "8px" }}>
-                Use "Sync Steam" in the sidebar to import your library
+                Log in and use Sync Steam to import your library
               </p>
             </div>
           </div>
@@ -114,7 +115,6 @@ export default function Dashboard({ onNavigate }: Props) {
         </div>
       </div>
 
-      {/* Currently playing */}
       {playing > 0 && (
         <div className="section">
           <div className="section-header">
@@ -137,7 +137,6 @@ export default function Dashboard({ onNavigate }: Props) {
         </div>
       )}
 
-      {/* Recently added */}
       <div className="section">
         <div className="section-header">
           <span className="section-title">Recently Added</span>
