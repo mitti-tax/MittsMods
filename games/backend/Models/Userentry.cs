@@ -20,7 +20,7 @@ public class UserEntry
     public int? AchievementsTotal { get; set; }
 
     // How it was played
-    public PlayMode? Mode { get; set; }           // Handheld, TV, Monitor — nullable (not always relevant)
+    public PlayMode? Mode { get; set; }
     public HardwareType Hardware { get; set; } = HardwareType.Original;
 
     public EntrySource Source { get; set; } = EntrySource.Manual;

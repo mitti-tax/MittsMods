@@ -20,7 +20,7 @@ const STATUSES = [
   "Dropped",
   "OnHold",
 ] as const;
-const MODES = ["Handheld", "TV", "Monitor"] as const;
+const MODES = ["Handheld", "TV", "CRT"] as const;
 const HARDWARE = ["Original", "Modded", "Emulator", "Cloud"] as const;
 
 // Shown when a guest tries to do something that requires login
