@@ -678,3 +678,22 @@ time {
     gap: 20px;
   }
 }
+
+.btn-games {
+  display: inline-block;
+  background: #0d1b2a;
+  color: #007acc;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #007acc;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.btn-games:hover {
+  background: #007acc;
+  color: #fff;
+}

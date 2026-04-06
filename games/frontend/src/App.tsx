@@ -4,11 +4,12 @@ import GamesPage from "./pages/GamesPage";
 import { api } from "./api/client";
 import "./index.css";
 
-type Page = "dashboard" | "games" | "backlog" | "favourites";
+type Page = "dashboard" | "games" | "backlog";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
   const [syncing, setSyncing] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
     type: "success" | "error";
@@ -38,9 +39,29 @@ function App() {
     }
   };
 
+  const navigate = (p: Page) => {
+    setPage(p);
+    setSidebarOpen(false); // close sidebar on mobile after nav
+  };
+
   return (
     <div className="app">
-      <aside className="sidebar">
+      {/* Mobile top bar — only visible on small screens */}
+      <div className="mobile-topbar">
+        <span className="mobile-topbar-logo">GameLog</span>
+        <button className="hamburger" onClick={() => setSidebarOpen((o) => !o)}>
+          {sidebarOpen ? "✕" : "☰"}
+        </button>
+      </div>
+
+      {/* Sidebar overlay — closes sidebar when tapping outside */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? "visible" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
           <h1>GameLog</h1>
           <span>by MittsMods</span>
@@ -49,27 +70,21 @@ function App() {
         <nav className="sidebar-nav">
           <div
             className={`nav-item ${page === "dashboard" ? "active" : ""}`}
-            onClick={() => setPage("dashboard")}
+            onClick={() => navigate("dashboard")}
           >
             <span className="nav-icon">◈</span> Dashboard
           </div>
           <div
             className={`nav-item ${page === "games" ? "active" : ""}`}
-            onClick={() => setPage("games")}
+            onClick={() => navigate("games")}
           >
             <span className="nav-icon">▦</span> All Games
           </div>
           <div
             className={`nav-item ${page === "backlog" ? "active" : ""}`}
-            onClick={() => setPage("backlog")}
+            onClick={() => navigate("backlog")}
           >
             <span className="nav-icon">◎</span> Backlog
-          </div>
-          <div
-            className={`nav-item ${page === "favourites" ? "active" : ""}`}
-            onClick={() => setPage("favourites")}
-          >
-            <span className="nav-icon">★</span> Favourites
           </div>
         </nav>
 
@@ -92,11 +107,11 @@ function App() {
         </div>
       </aside>
 
+      {/* Main content */}
       <main className="main">
-        {page === "dashboard" && <Dashboard onNavigate={setPage} />}
+        {page === "dashboard" && <Dashboard onNavigate={navigate} />}
         {page === "games" && <GamesPage filter="all" />}
         {page === "backlog" && <GamesPage filter="Backlog" />}
-        {page === "favourites" && <GamesPage filter="favourites" />}
       </main>
 
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
