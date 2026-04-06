@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -17,17 +18,18 @@ namespace MittsModsApi.Migrations
                 name: "Games",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    CoverUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    Genre = table.Column<string>(type: "TEXT", nullable: true),
-                    ReleaseYear = table.Column<int>(type: "INTEGER", nullable: true),
-                    Developer = table.Column<string>(type: "TEXT", nullable: true),
-                    Summary = table.Column<string>(type: "TEXT", nullable: true),
-                    IgdbId = table.Column<int>(type: "INTEGER", nullable: true),
-                    SteamAppId = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Title = table.Column<string>(type: "text", nullable: false),
+                    CoverUrl = table.Column<string>(type: "text", nullable: true),
+                    Genre = table.Column<string>(type: "text", nullable: true),
+                    ReleaseYear = table.Column<int>(type: "integer", nullable: true),
+                    Developer = table.Column<string>(type: "text", nullable: true),
+                    Summary = table.Column<string>(type: "text", nullable: true),
+                    IgdbId = table.Column<int>(type: "integer", nullable: true),
+                    SteamAppId = table.Column<int>(type: "integer", nullable: true),
+                    IsFavourite = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -38,10 +40,10 @@ namespace MittsModsApi.Migrations
                 name: "Platforms",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Abbreviation = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Abbreviation = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -52,23 +54,23 @@ namespace MittsModsApi.Migrations
                 name: "UserEntries",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    GameId = table.Column<int>(type: "INTEGER", nullable: false),
-                    PlatformId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Status = table.Column<string>(type: "TEXT", nullable: false),
-                    HoursPlayed = table.Column<decimal>(type: "TEXT", nullable: true),
-                    Rating = table.Column<int>(type: "INTEGER", nullable: true),
-                    Notes = table.Column<string>(type: "TEXT", nullable: true),
-                    AchievementsEarned = table.Column<int>(type: "INTEGER", nullable: true),
-                    AchievementsTotal = table.Column<int>(type: "INTEGER", nullable: true),
-                    Mode = table.Column<string>(type: "TEXT", nullable: true),
-                    Hardware = table.Column<string>(type: "TEXT", nullable: false),
-                    Source = table.Column<string>(type: "TEXT", nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    GameId = table.Column<int>(type: "integer", nullable: false),
+                    PlatformId = table.Column<int>(type: "integer", nullable: false),
+                    Status = table.Column<string>(type: "text", nullable: false),
+                    HoursPlayed = table.Column<decimal>(type: "numeric", nullable: true),
+                    Rating = table.Column<int>(type: "integer", nullable: true),
+                    Notes = table.Column<string>(type: "text", nullable: true),
+                    AchievementsEarned = table.Column<int>(type: "integer", nullable: true),
+                    AchievementsTotal = table.Column<int>(type: "integer", nullable: true),
+                    Mode = table.Column<string>(type: "text", nullable: true),
+                    Hardware = table.Column<string>(type: "text", nullable: false),
+                    Source = table.Column<string>(type: "text", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

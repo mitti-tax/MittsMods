@@ -7,18 +7,24 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Services ---
 builder.Services.AddControllers();
 
-// SQLite via Entity Framework Core
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+// PostgreSQL via Entity Framework Core
+// Connection string comes from:
+//   - Local dev: appsettings.Development.json
+//   - Production: DATABASE_URL environment variable (set by Railway)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
-// In-memory cache — used by IgdbService for token + search result caching
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// In-memory cache
 builder.Services.AddMemoryCache();
 
 // HttpClient + Services
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<SteamService>();
 
-// CORS — allow the React frontend to talk to this API
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
@@ -26,7 +32,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "https://mitti-tax.github.io/MittsMods/"
+                "https://mitti-tax.github.io"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -35,13 +41,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// --- Middleware ---
 app.UseHttpsRedirection();
 app.UseCors("FrontendPolicy");
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-apply any pending EF migrations on startup
+// Auto-apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
