@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projects — MittsMods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a href="index.html" class="nav-logo">MittsMods</a>
+        <ul class="nav-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="projects.html" class="active">Projects</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero container">
+        <span class="hero-tag">Projects</span>
+        <h1>All Builds & Posts</h1>
+        <p class="page-hero-sub">
+          A running log of everything I've documented; console mods, homelab
+          projects, code, and more.
+        </p>
+      </section>
+
+      <!-- Filter bar -->
+      <section class="filter-bar container">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="mods">Mods</button>
+        <button class="filter-btn" data-filter="code">Code</button>
+        <button class="filter-btn" data-filter="other">Other</button>
+      </section>
+
+      <!-- Posts -->
+      <section class="projects-list container" id="projects-list">
+        <article class="post-item" data-category="mods">
+          <div class="post-meta">
+            <span class="post-cat cat-mods">Mods / Sega</span>
+            <time>Aug 24, 2025</time>
+          </div>
+          <h3>
+            <a href="#"
+              >My Ultimate Modded VA0 Sega Dreamcast: From Bone Stock to Fully
+              Upgraded</a
+            >
+          </h3>
+          <p>
+            Console: Sega Dreamcast VA0 (NTSC-J HKT-3000). Mods include DreamPSU
+            Rev2.0 w/ barrel jack, GDEMU v5.20.5, and more. Check out the full
+            rundown of everything I did to this machine.
+          </p>
+          <div class="post-tags">
+            <span class="tag">Dreamcast</span>
+            <span class="tag">GDEMU</span>
+            <span class="tag">PSU Mod</span>
+          </div>
+          <a href="#" class="post-read">Read more →</a>
+        </article>
+
+        <article class="post-item" data-category="mods">
+          <div class="post-meta">
+            <span class="post-cat cat-mods">Mods / Microsoft</span>
+            <time>Aug 19, 2025</time>
+          </div>
+          <h3>
+            <a href="#"
+              >Xbox 360 in 2025 is still cool: My RGH3 Corona V3 Build</a
+            >
+          </h3>
+          <p>
+            I transformed a stock Xbox 360 S Corona V3 into a modern console
+            with an RGH3 install, fresh thermal paste, and Aurora/DashLaunch.
+            One of my smoothest mods yet, combining nostalgia with a big boost
+            in functionality.
+          </p>
+          <div class="post-tags">
+            <span class="tag">Xbox 360</span>
+            <span class="tag">RGH3</span>
+            <span class="tag">Aurora</span>
+          </div>
+          <a href="#" class="post-read">Read more →</a>
+        </article>
+
+        <article class="post-item" data-category="mods">
+          <div class="post-meta">
+            <span class="post-cat cat-mods">Mods / Nintendo</span>
+            <time>Jun 25, 2025</time>
+          </div>
+          <h3>
+            <a href="#"
+              >Switch Lite: Clear Shell, Hall Sticks, and a Picofly modchip
+              (RP2040)</a
+            >
+          </h3>
+          <p>
+            A clear purple shell, hall effect joysticks, and a PicoFly modchip.
+            What started as a soldering challenge turned into one of my
+            favourite handheld consoles.
+          </p>
+          <div class="post-tags">
+            <span class="tag">Switch Lite</span>
+            <span class="tag">Picofly</span>
+            <span class="tag">Hall Effect</span>
+          </div>
+          <a href="#" class="post-read">Read more →</a>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner container">
+        <span class="footer-logo">MittsMods</span>
+        <p>
+          Perth, WA · Console modding & tinkering ·
+          <a href="mailto:mittsmods@outlook.com">mittsmods@outlook.com</a>
+        </p>
+        <p class="footer-copy">
+          © 2026 Dimitri. Built from scratch and hosted on GitHub Pages.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      const filterBtns = document.querySelectorAll(".filter-btn");
+      const posts = document.querySelectorAll(".post-item[data-category]");
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          filterBtns.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          const filter = btn.dataset.filter;
+          posts.forEach((post) => {
+            if (filter === "all" || post.dataset.category === filter) {
+              post.style.display = "";
+            } else {
+              post.style.display = "none";
+            }
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
