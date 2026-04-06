@@ -27,6 +27,14 @@ export default function Dashboard({ onNavigate }: Props) {
     })
     .slice(0, 8);
 
+  useEffect(() => {
+    if (slideshowGames.length < 2) return;
+    const timer = setInterval(
+      () => setSlide((s) => (s + 1) % slideshowGames.length),
+      4000,
+    );
+    return () => clearInterval(timer);
+  }, [slideshowGames.length]);
   const totalGames = games.length;
   const completed = games.filter((g) =>
     g.userEntries.some((e) => e.status === "Completed"),
