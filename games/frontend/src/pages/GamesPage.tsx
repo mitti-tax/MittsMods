@@ -208,7 +208,6 @@ export default function GamesPage({ filter }: Props) {
       {selected && !editMode && (
         <GameDetailModal
           game={selected}
-          platforms={platforms}
           onClose={() => setSelected(null)}
           onDelete={handleDelete}
           onUpdateEntry={handleUpdateEntry}
