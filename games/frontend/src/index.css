@@ -785,3 +785,183 @@ img {
 .quick-status-select:focus {
   border-color: var(--blue);
 }
+/* ================================================
+   MOBILE / RESPONSIVE STYLES
+   Replaces the existing @media block at the bottom
+   ================================================ */
+
+/* --- Mobile top bar --- */
+.mobile-topbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  z-index: 80;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.mobile-topbar-logo {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hamburger {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  padding: 6px;
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--transition);
+}
+.hamburger:hover {
+  color: var(--text);
+}
+
+/* --- Sidebar overlay (mobile) --- */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 90;
+  backdrop-filter: blur(2px);
+}
+
+/* --- Responsive breakpoints --- */
+@media (max-width: 768px) {
+  /* Show mobile top bar */
+  .mobile-topbar {
+    display: flex;
+  }
+
+  /* Push main content down below topbar */
+  .main {
+    margin-left: 0;
+    padding-top: 52px;
+  }
+
+  /* Sidebar slides in from left */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 100;
+    top: 0;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Overlay visible when sidebar open */
+  .sidebar-overlay.visible {
+    display: block;
+  }
+
+  /* Stats bar — 2x2 grid */
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-cell:nth-child(2) {
+    border-right: none;
+  }
+  .stat-cell:nth-child(3) {
+    border-top: 1px solid var(--border);
+  }
+  .stat-cell:nth-child(4) {
+    border-top: 1px solid var(--border);
+  }
+
+  /* Games grid — 2 columns */
+  .games-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* Slideshow — shorter on mobile */
+  .hero-slideshow {
+    height: 280px;
+  }
+
+  .slide-cover {
+    height: 120px;
+    width: 80px;
+    left: 16px;
+    bottom: 16px;
+  }
+
+  .slide-info {
+    left: 112px;
+    bottom: 20px;
+  }
+
+  .slide-title {
+    font-size: 20px;
+  }
+
+  /* Section padding reduced */
+  .section {
+    padding: 20px 16px;
+  }
+
+  /* Section header stack on small screens */
+  .section-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Modal — full screen on mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
+
+  /* Filter bar — scrollable row */
+  .filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-chip {
+    flex-shrink: 0;
+  }
+
+  /* Toast — full width on mobile */
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .games-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .game-card-title {
+    font-size: 11px;
+  }
+}
