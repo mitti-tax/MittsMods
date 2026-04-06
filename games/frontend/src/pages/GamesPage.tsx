@@ -619,14 +619,12 @@ function AddGameModal({
 
 function GameDetailModal({
   game,
-  platforms,
   onClose,
   onDelete,
   onUpdateEntry,
   onToggleFavourite,
 }: {
   game: Game;
-  platforms: Platform[];
   onClose: () => void;
   onDelete: (id: number) => void;
   onUpdateEntry: (gameId: number, entryId: number, data: any) => void;
@@ -668,7 +666,11 @@ function GameDetailModal({
                 color: game.isFavourite ? "var(--orange)" : "var(--text-faint)",
                 fontSize: "16px",
               }}
-              title={game.isFavourite ? "Remove from favourites" : "Add to favourites"}
+              title={
+                game.isFavourite
+                  ? "Remove from favourites"
+                  : "Add to favourites"
+              }
             >
               {game.isFavourite ? "★" : "☆"}
             </button>
