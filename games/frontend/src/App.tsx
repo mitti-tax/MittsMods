@@ -1,121 +1,107 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import Dashboard from "./pages/Dashboard";
+import GamesPage from "./pages/GamesPage";
+import { api } from "./api/client";
+import "./index.css";
+
+type Page = "dashboard" | "games" | "backlog" | "favourites";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [page, setPage] = useState<Page>("dashboard");
+  const [syncing, setSyncing] = useState(false);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await api.syncSteam();
+      showToast(
+        `Synced — ${result.added} added, ${result.updated} updated`,
+        "success",
+      );
+      setPage((p) => {
+        setTimeout(() => setPage(p), 0);
+        return "dashboard";
+      });
+    } catch {
+      showToast("Steam sync failed", "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <h1>GameLog</h1>
+          <span>by MittsMods</span>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        <nav className="sidebar-nav">
+          <div
+            className={`nav-item ${page === "dashboard" ? "active" : ""}`}
+            onClick={() => setPage("dashboard")}
+          >
+            <span className="nav-icon">◈</span> Dashboard
+          </div>
+          <div
+            className={`nav-item ${page === "games" ? "active" : ""}`}
+            onClick={() => setPage("games")}
+          >
+            <span className="nav-icon">▦</span> All Games
+          </div>
+          <div
+            className={`nav-item ${page === "backlog" ? "active" : ""}`}
+            onClick={() => setPage("backlog")}
+          >
+            <span className="nav-icon">◎</span> Backlog
+          </div>
+          <div
+            className={`nav-item ${page === "favourites" ? "active" : ""}`}
+            onClick={() => setPage("favourites")}
+          >
+            <span className="nav-icon">★</span> Favourites
+          </div>
+        </nav>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="sidebar-bottom">
+          <button
+            className="sync-btn"
+            onClick={handleSync}
+            disabled={syncing}
+            style={{ marginBottom: "10px" }}
+          >
+            {syncing ? "SYNCING..." : "⟳ SYNC STEAM"}
+          </button>
+          <a
+            href="https://mitti-tax.github.io/MittsMods/"
+            className="nav-item"
+            style={{ fontSize: "11px", display: "flex", padding: "8px 0" }}
+          >
+            <span className="nav-icon">←</span> MittsMods
+          </a>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </aside>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <main className="main">
+        {page === "dashboard" && <Dashboard onNavigate={setPage} />}
+        {page === "games" && <GamesPage filter="all" />}
+        {page === "backlog" && <GamesPage filter="Backlog" />}
+        {page === "favourites" && <GamesPage filter="favourites" />}
+      </main>
+
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    </div>
+  );
 }
 
-export default App
+export default App;

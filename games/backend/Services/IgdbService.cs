@@ -42,8 +42,9 @@ public class IgdbService
             search ""{query}"";
             fields name, summary, cover.url, first_release_date,
                    genres.name, involved_companies.developer,
-                   involved_companies.company.name;
-            limit 10;
+                   involved_companies.company.name,
+                   platforms.name, platforms.abbreviation;
+            limit 20;
         ";
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.igdb.com/v4/games")
@@ -127,6 +128,11 @@ public class IgdbService
             .Select(c => c.company!.name!)
             .ToList() ?? new();
 
+        var platforms = raw.platforms?
+            .Where(p => p.name != null)
+            .Select(p => p.name!)
+            .ToList() ?? new();
+
         return new IgdbGameResult
         {
             Id          = raw.id,
@@ -135,7 +141,8 @@ public class IgdbService
             CoverUrl    = coverUrl,
             ReleaseYear = releaseYear,
             Genres      = genres,
-            Developers  = developers
+            Developers  = developers,
+            Platforms   = platforms
         };
     }
 }

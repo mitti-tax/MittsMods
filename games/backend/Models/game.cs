@@ -20,6 +20,8 @@ public class Game
     public int? IgdbId { get; set; }
     public int? SteamAppId { get; set; }
 
+    public bool IsFavourite { get; set; } = false;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation — one game can have many user log entries (e.g. played on multiple platforms)

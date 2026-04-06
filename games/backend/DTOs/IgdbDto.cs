@@ -9,6 +9,7 @@ public class IgdbGameResult
     public int? ReleaseYear { get; set; }
     public List<string> Genres { get; set; } = new();
     public List<string> Developers { get; set; } = new();
+    public List<string> Platforms { get; set; } = new();
 }
 
 public class IgdbRawGame
@@ -20,6 +21,13 @@ public class IgdbRawGame
     public long? first_release_date { get; set; }
     public List<IgdbRawGenre>? genres { get; set; }
     public List<IgdbRawInvolvedCompany>? involved_companies { get; set; }
+    public List<IgdbRawPlatform>? platforms { get; set; }
+}
+
+public class IgdbRawPlatform
+{
+    public string? name { get; set; }
+    public string? abbreviation { get; set; }
 }
 
 public class IgdbRawCover
