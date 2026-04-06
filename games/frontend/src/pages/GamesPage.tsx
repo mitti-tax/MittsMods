@@ -5,11 +5,12 @@ import {
   api,
   type CreateGamePayload,
   type IgdbResult,
-  type HardwareType,
 } from "../api/client";
 
 interface Props {
-  filter: "all" | "favourites" | string;
+  filter: "all" | string;
+  isLoggedIn: boolean;
+  onLoginRequest: () => void;
 }
 
 const STATUSES = [
@@ -19,19 +20,85 @@ const STATUSES = [
   "Dropped",
   "OnHold",
 ] as const;
-const MODES = ["Handheld", "TV", "CRT"] as const;
+const MODES = ["Handheld", "TV", "Monitor"] as const;
 const HARDWARE = ["Original", "Modded", "Emulator", "Cloud"] as const;
 
-export default function GamesPage({ filter }: Props) {
+// Shown when a guest tries to do something that requires login
+function PermissionDeniedModal({
+  onClose,
+  onLogin,
+}: {
+  onClose: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal"
+        style={{ maxWidth: "380px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <span className="modal-title">Access Restricted</span>
+          <button className="modal-close" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <div className="modal-body">
+          <div style={{ textAlign: "center", padding: "8px 0 20px" }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔒</div>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--text-muted)",
+                marginBottom: "8px",
+              }}
+            >
+              Sorry, you don't have permission to do that.
+            </p>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--text-faint)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              This library belongs to Dimitri. Log in as admin to make changes.
+            </p>
+          </div>
+          <div className="btn-row" style={{ justifyContent: "center" }}>
+            <button className="btn btn-ghost" onClick={onClose}>
+              Close
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                onClose();
+                onLogin();
+              }}
+            >
+              Log In
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function GamesPage({
+  filter,
+  isLoggedIn,
+  onLoginRequest,
+}: Props) {
   const [games, setGames] = useState<Game[]>([]);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setFilter] = useState(
-    filter === "all" ? "All" : filter === "favourites" ? "Favourites" : filter,
-  );
+  const [activeFilter, setFilter] = useState(filter === "all" ? "All" : filter);
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Game | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [showPermDenied, setShowPermDenied] = useState(false);
   const [toast, setToast] = useState<{
     msg: string;
     type: "success" | "error";
@@ -51,14 +118,21 @@ export default function GamesPage({ filter }: Props) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Gate any write action — show permission modal if not logged in
+  const requireAuth = (action: () => void) => {
+    if (!isLoggedIn) {
+      setShowPermDenied(true);
+      return;
+    }
+    action();
+  };
+
   const filtered =
     activeFilter === "All"
       ? games
-      : activeFilter === "Favourites"
-        ? games.filter((g) => g.isFavourite)
-        : games.filter((g) =>
-            g.userEntries.some((e) => e.status === activeFilter),
-          );
+      : games.filter((g) =>
+          g.userEntries.some((e) => e.status === activeFilter),
+        );
 
   const handleAdd = async (payload: CreateGamePayload) => {
     try {
@@ -68,16 +142,6 @@ export default function GamesPage({ filter }: Props) {
       showToast(`"${game.title}" added`, "success");
     } catch {
       showToast("Failed to add game", "error");
-    }
-  };
-
-  const handleToggleFavourite = async (id: number) => {
-    try {
-      const updated = await api.toggleFavourite(id);
-      setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-      setSelected((prev) => (prev?.id === updated.id ? updated : prev));
-    } catch {
-      showToast("Failed to update favourite", "error");
     }
   };
 
@@ -127,23 +191,26 @@ export default function GamesPage({ filter }: Props) {
       <div className="section">
         <div className="section-header">
           <span className="section-title">Library</span>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              className={`btn ${editMode ? "btn-primary" : "btn-ghost"}`}
-              onClick={() => setEditMode((e) => !e)}
-            >
-              {editMode ? "✓ Done" : "✎ Edit Mode"}
-            </button>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {/* Edit mode — only shown when logged in */}
+            {isLoggedIn && (
+              <button
+                className={`btn ${editMode ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setEditMode((e) => !e)}
+              >
+                {editMode ? "✓ Done" : "✎ Edit Mode"}
+              </button>
+            )}
             <button
               className="btn btn-primary"
-              onClick={() => setShowAdd(true)}
+              onClick={() => requireAuth(() => setShowAdd(true))}
             >
               + Add Game
             </button>
           </div>
         </div>
 
-        {editMode && (
+        {editMode && isLoggedIn && (
           <div
             style={{
               background: "var(--blue-glow)",
@@ -158,6 +225,41 @@ export default function GamesPage({ filter }: Props) {
             }}
           >
             EDIT MODE — Click a status badge on any card to change it instantly
+          </div>
+        )}
+
+        {/* Guest notice */}
+        {!isLoggedIn && (
+          <div
+            style={{
+              background: "rgba(0,122,204,0.05)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: "10px 14px",
+              marginBottom: "16px",
+              fontFamily: "var(--font-mono)",
+              fontSize: "11px",
+              color: "var(--text-faint)",
+              letterSpacing: "0.04em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>👁 Viewing as guest — read only</span>
+            <button
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--blue)",
+                fontSize: "11px",
+                cursor: "pointer",
+                fontFamily: "var(--font-mono)",
+              }}
+              onClick={onLoginRequest}
+            >
+              Log in →
+            </button>
           </div>
         )}
 
@@ -176,12 +278,14 @@ export default function GamesPage({ filter }: Props) {
         {filtered.length === 0 ? (
           <div className="empty-state">
             <p>NO GAMES FOUND</p>
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowAdd(true)}
-            >
-              + Add Game
-            </button>
+            {isLoggedIn && (
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowAdd(true)}
+              >
+                + Add Game
+              </button>
+            )}
           </div>
         ) : (
           <div className="games-grid">
@@ -189,8 +293,8 @@ export default function GamesPage({ filter }: Props) {
               <GameCard
                 key={g.id}
                 game={g}
-                editMode={editMode}
-                onClick={() => !editMode && setSelected(g)}
+                editMode={editMode && isLoggedIn}
+                onClick={() => setSelected(g)}
                 onQuickStatus={handleQuickStatus}
               />
             ))}
@@ -198,20 +302,34 @@ export default function GamesPage({ filter }: Props) {
         )}
       </div>
 
-      {showAdd && (
+      {showAdd && isLoggedIn && (
         <AddGameModal
           platforms={platforms}
           onAdd={handleAdd}
           onClose={() => setShowAdd(false)}
         />
       )}
-      {selected && !editMode && (
+
+      {selected && (
         <GameDetailModal
           game={selected}
+          isLoggedIn={isLoggedIn}
           onClose={() => setSelected(null)}
-          onDelete={handleDelete}
-          onUpdateEntry={handleUpdateEntry}
-          onToggleFavourite={handleToggleFavourite}
+          onDelete={(id) => requireAuth(() => handleDelete(id))}
+          onUpdateEntry={(gId, eId, data) =>
+            requireAuth(() => handleUpdateEntry(gId, eId, data))
+          }
+          onLoginRequest={() => {
+            setSelected(null);
+            setShowPermDenied(true);
+          }}
+        />
+      )}
+
+      {showPermDenied && (
+        <PermissionDeniedModal
+          onClose={() => setShowPermDenied(false)}
+          onLogin={onLoginRequest}
         />
       )}
 
@@ -233,11 +351,7 @@ function GameCard({
 }) {
   const entry = game.userEntries[0];
   return (
-    <div
-      className="game-card"
-      onClick={onClick}
-      style={{ cursor: editMode ? "default" : "pointer" }}
-    >
+    <div className="game-card" onClick={onClick}>
       {game.coverUrl ? (
         <img src={game.coverUrl} className="game-card-cover" alt={game.title} />
       ) : (
@@ -292,10 +406,9 @@ function AddGameModal({
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<IgdbResult | null>(null);
   const [platformId, setPlatform] = useState(platforms[0]?.id ?? 1);
-  const [genre, setGenre] = useState("");
   const [status, setStatus] = useState("Backlog");
-  const [mode, setMode] = useState<string>("");
-  const [hardware, setHardware] = useState<string>("Original");
+  const [mode, setMode] = useState("");
+  const [hardware, setHardware] = useState("Original");
   const [hours, setHours] = useState("");
   const [rating, setRating] = useState("");
   const [notes, setNotes] = useState("");
@@ -323,18 +436,6 @@ function AddGameModal({
     setSelected(r);
     setQuery(r.name);
     setResults([]);
-    if (r.genres[0]) setGenre(r.genres[0]);
-    // Auto-match platform by comparing IGDB platform names against our list
-    const matched = platforms.find((p) =>
-      r.platforms.some(
-        (igdbPlat) =>
-          igdbPlat.toLowerCase().includes(p.name.toLowerCase()) ||
-          p.name.toLowerCase().includes(igdbPlat.toLowerCase()) ||
-          (p.abbreviation &&
-            igdbPlat.toLowerCase().includes(p.abbreviation.toLowerCase())),
-      ),
-    );
-    if (matched) setPlatform(matched.id);
   };
 
   const handleSubmit = () => {
@@ -343,7 +444,7 @@ function AddGameModal({
     onAdd({
       title,
       coverUrl: selected?.coverUrl ?? undefined,
-      genre: genre || selected?.genres[0] || undefined,
+      genre: selected?.genres[0] ?? undefined,
       releaseYear: selected?.releaseYear ?? undefined,
       developer: selected?.developers[0] ?? undefined,
       summary: selected?.summary ?? undefined,
@@ -370,7 +471,6 @@ function AddGameModal({
           </button>
         </div>
         <div className="modal-body">
-          {/* IGDB search */}
           <div className="form-group">
             <label className="form-label">Search IGDB</label>
             <input
@@ -466,7 +566,6 @@ function AddGameModal({
             </div>
           )}
 
-          {/* Platform & Status */}
           <div
             style={{
               display: "grid",
@@ -504,18 +603,6 @@ function AddGameModal({
             </div>
           </div>
 
-          {/* Genre */}
-          <div className="form-group">
-            <label className="form-label">Genre</label>
-            <input
-              className="form-input"
-              placeholder="e.g. RPG, Action, Platformer"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-            />
-          </div>
-
-          {/* Mode & Hardware */}
           <div
             style={{
               display: "grid",
@@ -554,7 +641,6 @@ function AddGameModal({
             </div>
           </div>
 
-          {/* Hours & Rating */}
           <div
             style={{
               display: "grid",
@@ -618,22 +704,26 @@ function AddGameModal({
 
 function GameDetailModal({
   game,
+  isLoggedIn,
   onClose,
   onDelete,
   onUpdateEntry,
-  onToggleFavourite,
+  onLoginRequest,
 }: {
   game: Game;
+  isLoggedIn: boolean;
   onClose: () => void;
   onDelete: (id: number) => void;
   onUpdateEntry: (gameId: number, entryId: number, data: any) => void;
-  onToggleFavourite: (id: number) => void;
+  onLoginRequest: () => void;
 }) {
   const entry = game.userEntries[0];
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(entry?.status ?? "Backlog");
-  const [mode, setMode] = useState(entry?.mode ?? "");
-  const [hardware, setHardware] = useState(entry?.hardware ?? "Original");
+  const [mode, setMode] = useState<string>(entry?.mode ?? "");
+  const [hardware, setHardware] = useState<string>(
+    entry?.hardware ?? "Original",
+  );
   const [hours, setHours] = useState(String(entry?.hoursPlayed ?? ""));
   const [rating, setRating] = useState(String(entry?.rating ?? ""));
   const [notes, setNotes] = useState(entry?.notes ?? "");
@@ -656,30 +746,11 @@ function GameDetailModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">{game.title}</span>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => onToggleFavourite(game.id)}
-              style={{
-                padding: "4px 8px",
-                color: game.isFavourite ? "var(--orange)" : "var(--text-faint)",
-                fontSize: "16px",
-              }}
-              title={
-                game.isFavourite
-                  ? "Remove from favourites"
-                  : "Add to favourites"
-              }
-            >
-              {game.isFavourite ? "★" : "☆"}
-            </button>
-            <button className="modal-close" onClick={onClose}>
-              ✕
-            </button>
-          </div>
+          <button className="modal-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
-          {/* Cover + meta */}
           <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
             {game.coverUrl && (
               <img
@@ -816,7 +887,7 @@ function GameDetailModal({
             </p>
           )}
 
-          {entry && editing ? (
+          {entry && editing && isLoggedIn ? (
             <>
               <div
                 style={{
@@ -849,7 +920,6 @@ function GameDetailModal({
                   />
                 </div>
               </div>
-
               <div
                 style={{
                   display: "grid",
@@ -877,9 +947,7 @@ function GameDetailModal({
                   <select
                     className="form-select"
                     value={hardware}
-                    onChange={(e) =>
-                      setHardware(e.target.value as HardwareType)
-                    }
+                    onChange={(e) => setHardware(e.target.value)}
                   >
                     {HARDWARE.map((h) => (
                       <option key={h} value={h}>
@@ -889,7 +957,6 @@ function GameDetailModal({
                   </select>
                 </div>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Rating (1–10)</label>
                 <input
@@ -953,18 +1020,26 @@ function GameDetailModal({
                   </div>
                 )}
               <div className="btn-row">
-                <button
-                  className="btn btn-danger"
-                  onClick={() => onDelete(game.id)}
-                >
-                  Delete
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setEditing(true)}
-                >
-                  Edit Entry
-                </button>
+                {isLoggedIn ? (
+                  <>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => onDelete(game.id)}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => setEditing(true)}
+                    >
+                      Edit Entry
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-ghost" onClick={onLoginRequest}>
+                    🔒 Log in to edit
+                  </button>
+                )}
               </div>
             </>
           )}
