@@ -5,9 +5,10 @@ on:
     branches: [main]
     paths:
       - "games/frontend/**"
+      - ".github/workflows/deploy-games.yml"
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,9 +32,10 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: games/frontend/dist
           destination_dir: games
+          keep_files: true
