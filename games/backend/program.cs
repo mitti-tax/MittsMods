@@ -11,11 +11,12 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// In-memory cache used by IgdbService for token + search result caching
+// In-memory cache — used by IgdbService for token + search result caching
 builder.Services.AddMemoryCache();
 
-// HttpClient + IgdbService
+// HttpClient + Services
 builder.Services.AddHttpClient<IgdbService>();
+builder.Services.AddHttpClient<SteamService>();
 
 // CORS — allow the React frontend to talk to this API
 builder.Services.AddCors(options =>
