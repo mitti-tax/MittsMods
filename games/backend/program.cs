@@ -27,7 +27,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "https://mitti-tax.github.io"
+                "https://mitti-tax.github.io",
+                "https://mitti-tax.github.io/MittsMods/games/"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -49,12 +50,6 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// ---------------------------------------------------
-// Converts a postgres:// URI to Npgsql format
-// e.g. postgresql://user:pass@host:5432/dbname
-//   -> Host=host;Port=5432;Database=dbname;Username=user;Password=pass;SSL Mode=Require;Trust Server Certificate=true
-// If it's already in key=value format, returns as-is
-// ---------------------------------------------------
 static string ConvertDatabaseUrl(string url)
 {
     if (!url.StartsWith("postgres://") && !url.StartsWith("postgresql://"))
