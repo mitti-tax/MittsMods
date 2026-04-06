@@ -4,27 +4,22 @@ using MittsModsApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Services ---
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<IgdbService>();
+builder.Services.AddHttpClient<SteamService>();
 
-// PostgreSQL via Entity Framework Core
-// Connection string comes from:
-//   - Local dev: appsettings.Development.json
-//   - Production: DATABASE_URL environment variable (set by Railway)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+// --- Connection string ---
+// Railway provides DATABASE_URL as a postgres:// URI
+// Npgsql needs it converted to key=value format
+var rawUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+var connectionString = ConvertDatabaseUrl(rawUrl!);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// In-memory cache
-builder.Services.AddMemoryCache();
-
-// HttpClient + Services
-builder.Services.AddHttpClient<IgdbService>();
-builder.Services.AddHttpClient<SteamService>();
-
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
@@ -46,7 +41,6 @@ app.UseCors("FrontendPolicy");
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -54,3 +48,25 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// ---------------------------------------------------
+// Converts a postgres:// URI to Npgsql format
+// e.g. postgresql://user:pass@host:5432/dbname
+//   -> Host=host;Port=5432;Database=dbname;Username=user;Password=pass;SSL Mode=Require;Trust Server Certificate=true
+// If it's already in key=value format, returns as-is
+// ---------------------------------------------------
+static string ConvertDatabaseUrl(string url)
+{
+    if (!url.StartsWith("postgres://") && !url.StartsWith("postgresql://"))
+        return url; // already in Npgsql format
+
+    var uri = new Uri(url);
+    var userInfo = uri.UserInfo.Split(':');
+    var username = userInfo[0];
+    var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+    var host     = uri.Host;
+    var port     = uri.Port > 0 ? uri.Port : 5432;
+    var database = uri.AbsolutePath.TrimStart('/');
+
+    return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+}
