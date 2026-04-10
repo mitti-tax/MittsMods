@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Ultimate Modded VA0 Sega Dreamcast - MittsMods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="post.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a href="../index.html" class="nav-logo">MittsMods</a>
+        <ul class="nav-links">
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../about.html">About</a></li>
+          <li><a href="../projects.html" class="active">Projects</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <article class="post-article">
+        <header class="post-header container">
+          <div class="post-header-meta">
+            <span class="post-cat cat-mods">Mods / Sega</span>
+            <time>August 24, 2025</time>
+          </div>
+          <h1 class="post-title">
+            My Ultimate Modded VA0 Sega Dreamcast: From Bone Stock to Fully
+            Upgraded
+          </h1>
+          <p class="post-lead">
+            The Sega Dreamcast VA0 is a rare and unique iteration of the base
+            console. With a more robust cooling system, heatpipes, and a 5V disc
+            drive rail that made this ODE install anything but straightforward.
+            Here's everything I did to turn this Japanese launch unit into my
+            ultimate Dreamcast.
+          </p>
+
+          <div class="post-summary-card">
+            <h3>Build Summary</h3>
+            <ul>
+              <li>
+                <strong>Console:</strong> Sega Dreamcast VA0 (NTSC-J HKT-3000)
+              </li>
+              <li>
+                <strong>Mods:</strong> DreamPSU Rev2.0 w/ barrel jack, GDEMU
+                v5.20.5 + OpenMenu, 5V→3.3V array resistor mod
+              </li>
+              <li>
+                <strong>Cooling:</strong> 30×30×10mm 5V fan swap, 2mm thermal
+                pads
+              </li>
+              <li>
+                <strong>Battery:</strong> CR2032 socket swap (2–4 months
+                timekeeping)
+              </li>
+              <li>
+                <strong>Controller Board:</strong> 0.4A 72V resettable polyfuse
+              </li>
+              <li>
+                <strong>Result:</strong> Cooler, quieter, reliable VA0 with ODE
+                and modern conveniences
+              </li>
+            </ul>
+          </div>
+        </header>
+
+        <div class="post-body container">
+          <p>
+            The Dreamcast is one of the most interesting consoles ever made.
+            First console with realistic 3D graphics at home and an incredible
+            library of arcade ports. The one I picked up was a happy accident
+            (depending on how you look at it), being an NTSC-J HKT-3000 with a
+            <strong>VA0 motherboard</strong>, identifiable by the presence of a
+            heatsink at the fan position. VA0 boards have heatpipes on both the
+            CPU and GPU for direct cooling, and they supply their GD-ROM drive
+            with 5V instead of the 3.3V used on later models. That last detail
+            is what made this build complicated.
+          </p>
+
+          <p>
+            If I wanted to run a GDEMU (disc drive emulator), I'd need to do
+            board-level voltage work first. This post covers every mod I did:
+            PSU swap, GDEMU install, resistor array mod, fan replacement,
+            thermal pads, RTC battery socket, and a preventative fuse swap.
+          </p>
+
+          <h2>The Console</h2>
+
+          <p>
+            For a Japanese launch model from 1998, it was in surprisingly solid
+            shape. The disc drive worked fine (just loud), the fan buzzed more
+            than I'd like, and the case had the usual surface marks.
+          </p>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/dreamcast/20250719_014948413_iOS.jpg"
+                alt="Dreamcast VA0 internals with DreamPSU"
+                loading="lazy"
+              />
+              <figcaption>
+                VA0 internals: The heatpipe assembly is visible on the right, a
+                feature unique to this board revision
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/dreamcast/20250719_014943471_iOS.jpg"
+                alt="DreamPSU installed in Dreamcast"
+                loading="lazy"
+              />
+              <figcaption>
+                DreamPSU Rev2.0 dropped in where the original PSU sat, with the
+                barrel jack holder printed in
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>DreamPSU Rev2.0</h2>
+
+          <p>
+            Japanese Dreamcast PSUs are wired for 100V, so plugging one into
+            Australian mains would fry it immediately. Rather than hunt down a
+            step-down transformer, I went with a
+            <strong>DreamPSU Rev2.0</strong> paired with a generic 12V/5A
+            external brick. The kit included a 3D-printed barrel jack holder
+            that mounts without any drilling.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              Internals run cooler, with all the PSU heat now outside the
+              console
+            </li>
+            <li>No risk of destroying an original, irreplaceable PSU</li>
+            <li>Airflow improved with the bulky internal PSU removed</li>
+            <li>
+              Clean external finish, with the barrel jack holder fits perfectly
+              in the existing opening
+            </li>
+          </ul>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/dreamcast/20250719_015635216_iOS.jpg"
+              alt="Barrel jack connector in 3D printed holder"
+              loading="lazy"
+            />
+            <figcaption>
+              Barrel jack connector installed in the 3D-printed holder.
+            </figcaption>
+          </figure>
+
+          <h2>GDEMU v5.20.5 + Array Resistor Mod</h2>
+
+          <p>
+            This is where the VA0's quirk became a real problem. The GDEMU
+            expects a 3.3V supply rail, but the VA0 feeds 5V to the disc drive
+            connector. Plug it in without fixing the voltage and the GDEMU would
+            die over time. The fix is a resistor array mod: replacing seven tiny
+            SMD resistor arrays on the board to drop the rail down to 3.3V.
+          </p>
+
+          <div class="post-callout post-callout-warning">
+            <strong>VA0-specific:</strong> This voltage mod is only needed on
+            VA0 boards. If you have a VA1 or VA2 Dreamcast, the GDEMU installs
+            directly without any board modifications.
+          </div>
+
+          <ul class="post-list">
+            <li>
+              Desoldered and replaced <strong>seven resistor arrays</strong> —
+              7× 33Ω replaced with 7× 100Ω
+            </li>
+            <li>
+              Verified ~3.3V at the GD connector with a multimeter before
+              touching the GDEMU
+            </li>
+            <li>
+              128GB full-size SD card (microSD cards don't work with the GDEMU)
+            </li>
+            <li>OpenMenu as the loader — shows game box art, clean and fast</li>
+          </ul>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/dreamcast/20250705_064350414_iOS.jpg"
+              alt="Array resistors fully installed on VA0 board"
+              loading="lazy"
+            />
+            <figcaption>
+              Six of the seven resistor arrays installed, the seventh is on the
+              other side of the board. Each one took progressively less time as
+              my confidence grew.
+            </figcaption>
+          </figure>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/dreamcast/20250719_015016150_iOS.jpg"
+              alt="GDEMU installed with heatsinks on main chips"
+              loading="lazy"
+            />
+            <figcaption>
+              GDEMU v5.20.5 installed in the disc drive bay, with two small
+              heatsinks on the main chips
+            </figcaption>
+          </figure>
+
+          <p>
+            This took an entire weekend. The first resistor array took nearly
+            two hours of careful work under magnification. By the last one, I
+            was doing it in fifteen minutes. My micro-soldering confidence
+            improved more from this single mod than from anything else I'd done
+            before.
+          </p>
+
+          <div class="post-callout">
+            <strong>Lesson learned:</strong> Always verify voltage before
+            plugging in sensitive components. That multimeter check saved me
+            from potentially frying a $100+ ODE board.
+          </div>
+
+          <h2>Fan Mod (VA0-Specific)</h2>
+
+          <p>
+            Standard Noctua fan mods for the Dreamcast don't fit the VA0 because
+            of the heatpipe assembly. I tried restoring the original fan with
+            silicone grease on the bearing, but that barely helped. So I sourced
+            a near-identical replacement instead.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              <strong>30×30×10mm 5V fan</strong> from a 3D printer parts
+              supplier, identical footprint as stock
+            </li>
+            <li>
+              Spliced the original JST connector onto the new fan leads with
+              solder and heat-shrink
+            </li>
+            <li>
+              Dropped straight into the stock case guides, no adapter or cutting
+              needed
+            </li>
+            <li>
+              Configured the same airflow direction as stock, pulling hot air
+              through the heatsink and out of the console
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/dreamcast/20250719_011858820_iOS.jpg"
+                alt="New fan vs old fan comparison"
+                loading="lazy"
+              />
+              <figcaption>
+                New fan (left) next to the old fan (right). Near-identical form
+                factor, night and day noise difference, and increased air flow.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/dreamcast/20250719_013512254_iOS.jpg"
+                alt="Spliced fan connector"
+                loading="lazy"
+              />
+              <figcaption>
+                Original connector spliced onto the new fan leads with solder
+                and heat-shrink
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>RTC Battery Socket Mod</h2>
+
+          <p>
+            The Dreamcast uses a rechargeable RTC battery to keep the clock.
+            After 27 years, most of them hold charge for a few days at best, if
+            at all. I swapped in a female socket and a CR2032 coin cell.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              Console now keeps time for <strong>2–4 months</strong> on a single
+              CR2032
+            </li>
+            <li>Battery replacement is nearly tool-free going forward</li>
+            <li>
+              Standard CR2032 means no hunting for obscure replacement cells
+            </li>
+          </ul>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/dreamcast/20250719_020525957_iOS.jpg"
+              alt="CR2032 installed in new socket"
+              loading="lazy"
+            />
+            <figcaption>
+              CR2032 installed in the new socket, can be replaced with
+              rechargeable cell also
+            </figcaption>
+          </figure>
+
+          <h2>Controller Board Resettable Fuse</h2>
+
+          <p>
+            The Dreamcast controller board has a notoriously fragile single-use
+            fuse. Once it blows, all four controller ports go dead. It's a
+            common failure point on old units, and a easy preventative fix.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              Replaced with a <strong>0.4A 72V polyfuse</strong>, bought in a
+              pack of 50 for less than a single "Dreamcast fuse" costs online
+            </li>
+            <li>
+              My original fuse hadn't blown yet, this was pure preventative
+              maintenance
+            </li>
+            <li>
+              If it trips, it resets in a minute or two without any soldering
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/dreamcast/20250705_062356522_iOS.jpg"
+                alt="Resettable polyfuse installed"
+                loading="lazy"
+              />
+              <figcaption>
+                Resettable polyfuse (yellow component, left) in place of the
+                stock single-use fuse
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/dreamcast/20250705_062405743_iOS.jpg"
+                alt="Controller board fuse area"
+                loading="lazy"
+              />
+              <figcaption>
+                Controller board with the polyfuse installed, straightforward
+                swap with a big payoff
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Testing and Results</h2>
+
+          <ul class="post-list">
+            <li>Verified <strong>3.3V</strong> at the GD connector ✓</li>
+            <li>
+              Noise: went from loud buzzing (fan + disc drive) to near-silent
+            </li>
+            <li>
+              Thermals: new fan + thermal pads + no internal PSU + passive GDEMU
+              = significantly cooler
+            </li>
+            <li>
+              Stability: boots every time, no crashes, runs better than any
+              stock Dreamcast I've seen
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/dreamcast/20250824_132453853_iOS.jpg"
+                alt="Dreamcast running OpenMenu on CRT"
+                loading="lazy"
+              />
+              <figcaption>
+                Dreamcast running OpenMenu in 480i on a CRT. Phone camera and
+                interlaced video don't mix well, but it looks great in person.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/dreamcast/20250824_132722399_iOS.jpg"
+                alt="Final build shot"
+                loading="lazy"
+              />
+              <figcaption>
+                Final build: externally stock looking, internally completely
+                modernised
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Wrapping Up</h2>
+
+          <p>
+            This VA0 Dreamcast went from a boring stock Japanese unit to fully
+            modernised: external PSU, whisper-quiet fan, ODE, safer fuse, and a
+            proper RTC battery. It runs cooler, quieter, and will last far
+            longer than Sega ever intended.
+          </p>
+
+          <p>
+            The resistor array mod was the most challenging thing I'd done up to
+            that point. It pushed my micro-soldering to a new level and gave me
+            the confidence to take on the Xbox 360 RGH3 build that came after.
+            These are exactly the kinds of projects I love, extracting the most
+            out of old hardware, and making it reliable, practical, and fun to
+            use again.
+          </p>
+
+          <div class="post-shoutouts">
+            <h3>Shoutouts</h3>
+            <ul>
+              <li>
+                <a
+                  href="https://www.prototopia.net/threads/dev-mod-dreamcast-rev0-va0-with-gdemu.2722/"
+                  target="_blank"
+                  rel="noopener"
+                  >Protopia: Array resistor mod guide for VA0 Dreamcasts</a
+                >
+              </li>
+              <li>Macho Nacho Productions on YouTube: build inspiration</li>
+            </ul>
+          </div>
+        </div>
+
+        <nav class="post-nav container">
+          <a href="../projects.html" class="post-nav-back">← All Projects</a>
+          <a href="xbox-360-rgh3.html" class="post-nav-next">Xbox 360 RGH3 →</a>
+        </nav>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner container">
+        <span class="footer-logo">MittsMods</span>
+        <p>
+          Perth, WA · Console modding & tinkering ·
+          <a href="mailto:mittsmods@outlook.com">mittsmods@outlook.com</a>
+        </p>
+        <p class="footer-copy">
+          © 2026 Dimitri. Built from scratch and hosted on GitHub Pages.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

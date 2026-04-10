@@ -1,0 +1,264 @@
+/* posts/post.css — shared styles for all post pages */
+
+/* --- Post layout --- */
+.post-article {
+  padding-bottom: 80px;
+}
+
+/* --- Post header --- */
+.post-header {
+  padding: 64px 24px 48px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 56px;
+}
+
+.post-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.post-title {
+  font-size: clamp(26px, 4vw, 42px);
+  font-weight: 600;
+  color: var(--beige-soft);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+
+.post-lead {
+  font-size: 18px;
+  color: var(--text-muted);
+  font-weight: 300;
+  max-width: 620px;
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+/* --- Summary card --- */
+.post-summary-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  max-width: 580px;
+}
+
+.post-summary-card h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 14px;
+}
+
+.post-summary-card ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.post-summary-card li {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.post-summary-card strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* --- Post body --- */
+.post-body {
+  padding-bottom: 32px;
+}
+
+.post-body h2 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--beige-soft);
+  letter-spacing: -0.01em;
+  margin-top: 52px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-body p {
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-bottom: 16px;
+  max-width: 640px;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.post-body strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* --- Lists --- */
+.post-list {
+  list-style: none;
+  margin-bottom: 20px;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.post-list li {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 300;
+  padding-left: 16px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.post-list li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--green-dim);
+  font-family: var(--font-mono);
+}
+
+/* --- Images --- */
+.post-image-single {
+  margin: 32px 0;
+}
+
+.post-image-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 32px 0;
+}
+
+figure img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  display: block;
+  background: var(--surface);
+}
+
+figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 8px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+/* --- Callout boxes --- */
+.post-callout {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green-dim);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin: 24px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 620px;
+  line-height: 1.6;
+}
+
+.post-callout strong {
+  color: var(--green-soft);
+  font-weight: 500;
+}
+
+.post-callout-warning {
+  border-left-color: var(--beige-dim);
+}
+
+.post-callout-warning strong {
+  color: var(--beige);
+}
+
+/* --- Shoutouts --- */
+.post-shoutouts {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
+.post-shoutouts h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+}
+
+.post-shoutouts ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.post-shoutouts li {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.post-shoutouts a {
+  color: var(--green);
+  transition: color var(--transition);
+}
+
+.post-shoutouts a:hover {
+  color: var(--green-soft);
+}
+
+/* --- Post nav --- */
+.post-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 48px;
+  padding-bottom: 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 64px;
+}
+
+.post-nav-back,
+.post-nav-next {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.post-nav-back:hover,
+.post-nav-next:hover {
+  color: var(--green-soft);
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+  .post-image-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .post-header {
+    padding: 40px 24px 32px;
+  }
+
+  .post-lead {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xbox 360 RGH3 Corona V3 Build - MittsMods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="post.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a href="../index.html" class="nav-logo">MittsMods</a>
+        <ul class="nav-links">
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../about.html">About</a></li>
+          <li><a href="../projects.html" class="active">Projects</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <article class="post-article">
+        <header class="post-header container">
+          <div class="post-header-meta">
+            <span class="post-cat cat-mods">Mods / Microsoft</span>
+            <time>August 19, 2025</time>
+          </div>
+          <h1 class="post-title">
+            Xbox 360 in 2025 is still cool: My RGH3 Corona V3 Build
+          </h1>
+          <p class="post-lead">
+            A childhood nostalgia project that turned into a proper
+            micro-soldering challenge. The Corona V3 is one of the trickier
+            boards to RGH: smaller pads, a missing POST point, and a PLL wire
+            that requires a steady hand. Here's how it went.
+          </p>
+
+          <div class="post-summary-card">
+            <h3>Build Summary</h3>
+            <ul>
+              <li>
+                <strong>Console:</strong> Xbox 360 S Corona V3 (16MB NAND)
+              </li>
+              <li>
+                <strong>Mods:</strong> RGH3 with POST fix adapter, 1kΩ inline
+                resistor, Picoflasher NAND programming
+              </li>
+              <li>
+                <strong>Tools:</strong> Horusdy 2-in-1 @ 350°C, Essmentuin flux,
+                28/30 AWG wire, USB microscope, Kapton tape
+              </li>
+              <li>
+                <strong>Cooling:</strong> Arctic MX4 repaste, cleaned fan and
+                heatsink
+              </li>
+              <li>
+                <strong>Boot Times:</strong> Warm boots ~4s, cold boots 30–40s
+                (rare)
+              </li>
+              <li>
+                <strong>Software:</strong> Aurora dashboard, DashLaunch, update
+                manager
+              </li>
+              <li>
+                <strong>Result:</strong> Quiet, cool, reliable RGH3 console with
+                modern UI and full homebrew support
+              </li>
+            </ul>
+          </div>
+        </header>
+
+        <div class="post-body container">
+          <p>
+            The Xbox 360 marketplace shut down in 2024 and took a huge chunk of
+            the console's digital library with it. For a console that defined an
+            era of gaming, that felt wrong. I'd been sitting on a Corona V3 unit
+            for about a year, too intimidated by the RGH3 process to attempt it.
+            After looking at the cost of sending it to Queensland for a
+            professional mod, I decided to put that money into a proper
+            soldering station and do it myself.
+          </p>
+
+          <p>
+            That decision kicked off what I'd now call the real beginning of my
+            hardware modding journey.
+          </p>
+
+          <h2>The Console</h2>
+
+          <p>
+            I specifically wanted an Xbox 360 S (the slim model) with a Corona
+            motherboard. These have a single main SoC instead of separate CPU
+            and GPU packages meaning less heat, less power draw, and no RROD
+            risk from GPU solder joint failures. The 16MB NAND model was also a
+            deliberate choice, the 4GB variant uses the NAND as user storage,
+            which is a known failure point.
+          </p>
+
+          <p>
+            This one came from Facebook Marketplace in surprisingly clean
+            condition. Almost no dust inside, minimal thumb stick wear on the
+            controller. Just needed a wipe-down and fresh thermal paste.
+          </p>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/xbox360/20250625_103005159_iOS.jpg"
+                alt="Xbox 360 S console"
+                loading="lazy"
+              />
+              <figcaption>
+                The console before teardown. Clean unit with minimal external
+                wear
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/xbox360/20250625_103539910_iOS.jpg"
+                alt="Disassembled board with old dried thermal paste"
+                loading="lazy"
+              />
+              <figcaption>
+                Main board with the old dried-out thermal paste which is typical
+                for any console of this age
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Tools and Prep</h2>
+
+          <ul class="post-list">
+            <li>
+              <strong>Programmer:</strong> Raspberry Pi Pico running
+              Picoflasher, used with J-Runner on PC
+            </li>
+            <li>
+              <strong>Wire:</strong> 30 AWG solid core for the PLL point, 28 AWG
+              for everything else
+            </li>
+            <li>
+              <strong>POST fix adapter:</strong> Required for Corona V3/V4
+              boards, these are missing the POST pad that exists on V1/V2
+            </li>
+            <li>
+              <strong>Iron:</strong> Horusdy 2-in-1 station, T18-B tip at 350°C
+              with leaded solder
+            </li>
+            <li>
+              <strong>Flux:</strong> Essmentuin, essential for the tiny SMD
+              points
+            </li>
+            <li>
+              <strong>Microscope:</strong> Budget Amazon USB digital microscope
+              feeding into a monitor
+            </li>
+            <li>
+              <strong>Insulation:</strong> Kapton tape throughout for routing
+              and strain relief
+            </li>
+          </ul>
+
+          <div class="post-callout post-callout-warning">
+            <strong>Corona V3/V4 note:</strong> I didn't know I needed the POST
+            fix adapter until I had the console open and found the pads missing.
+            That cost me a week waiting for parts. Unfortunately the only
+            reliable way to check Corona board revisions is to visually inspect
+            the motherboard.
+          </div>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/xbox360/20250625_103547399_iOS.jpg"
+                alt="Missing POST point on Corona V3"
+                loading="lazy"
+              />
+              <figcaption>
+                The missing POST point on the V3 board. On V1/V2 boards there
+                are visible traces here. On the V3, it's blank. This is why the
+                POST fix adapter is required.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/xbox360/20250625_113416196_iOS.jpg"
+                alt="PLL wire with 1k ohm inline resistor"
+                loading="lazy"
+              />
+              <figcaption>
+                PLL ↔ SMC_PLL wire with the 1kΩ inline resistor added per RGH3
+                spec
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>The Install</h2>
+
+          <p>
+            The Corona V3 is considered one of the trickier RGH3 targets. The
+            board is smaller, the pads are smaller, and the PLL point requires
+            scraping the solder mask with a fine flathead. One wrong move and
+            you're doing a trace repair instead. I followed MrMario2011's guide
+            closely and took my time.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              PLL solder mask scraped carefully with a fine flathead screwdriver
+              at low pressure
+            </li>
+            <li>
+              1kΩ resistor added inline on the PLL wire per RGH3 instructions
+            </li>
+            <li>
+              CPU_RST and PLL wiring routed and secured with Kapton tape to the
+              underside of the board
+            </li>
+            <li>
+              All points verified under the microscope and checked for
+              continuity with a multimeter
+            </li>
+            <li>
+              NAND dumped successfully with Picoflasher. Two clean matching
+              dumps confirmed in J-Runner
+            </li>
+          </ul>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/xbox360/20250625_113506236_iOS.jpg"
+              alt="PLL point under microscope with 30 AWG wire"
+              loading="lazy"
+            />
+            <figcaption>
+              PLL point under the microscope. This is exactly what I was looking
+              at while soldering. 30 AWG solid core wire.
+            </figcaption>
+          </figure>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/xbox360/20250704_030642758_iOS.jpg"
+                alt="Picoflasher installed to NAND pads"
+                loading="lazy"
+              />
+              <figcaption>
+                Picoflasher correctly wired to the NAND pads. The POST fix
+                adapter is also visible to the right under the heatsink.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/xbox360/20250625_113349433_iOS.jpg"
+                alt="Wire routing on board"
+                loading="lazy"
+              />
+              <figcaption>
+                Wiring layout before final securing. Kapton tape keeps
+                everything flat and away from screw posts
+              </figcaption>
+            </figure>
+          </div>
+
+          <p>
+            One quirk with J-Runner: it only detected my Pico when it was
+            connected to both the Xbox and the PC simultaneously, with J-Runner
+            already open. Once I figured that out, all NAND dumps were clean and
+            matched 100%.
+          </p>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/xbox360/20250705_044601337_iOS.jpg"
+                alt="SMC_POST1 and SMC_PLL solder points"
+                loading="lazy"
+              />
+              <figcaption>
+                SMC_POST1 (left) and SMC_PLL (right) solder points. 30 AWG solid
+                core wire on both
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/xbox360/20250705_044546441_iOS.jpg"
+                alt="Final wire routing on back of board"
+                loading="lazy"
+              />
+              <figcaption>
+                Final wire routing on the back of the main board, secured flat
+                with Kapton tape
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>First Boot</h2>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/xbox360/20250704_031848204_iOS.jpg"
+              alt="XELL Reloaded successful first boot"
+              loading="lazy"
+            />
+            <figcaption>
+              XeLL Reloaded on the first try. This screen confirms the glitch is
+              working and the NAND image is good.
+            </figcaption>
+          </figure>
+
+          <p>
+            Booted straight into XeLL Reloaded on the first attempt. That green
+            screen is one of the most satisfying things you'll see after a build
+            like this.
+          </p>
+
+          <h2>Testing and Results</h2>
+
+          <ul class="post-list">
+            <li>
+              Warm boots: consistently around <strong>4 seconds</strong> :
+              nearly identical to stock
+            </li>
+            <li>
+              Cold boots (after extended downtime): 30–40 seconds, but rare in
+              practice
+            </li>
+            <li>
+              Noise: already very quiet, new MX4 paste improved heat transfer
+              noticeably
+            </li>
+            <li>
+              Thermals: exhaust air runs hotter than before, meaning the SoC is
+              coupling to the heatsink much better
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/xbox360/20250819_074233901_iOS.jpg"
+                alt="Console temps in DashLaunch"
+                loading="lazy"
+              />
+              <figcaption>
+                Console temperatures in DashLaunch after about 15 minutes of
+                gaming. Healthy numbers
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/xbox360/20250819_074237354_iOS.jpg"
+                alt="DashLaunch menu options"
+                loading="lazy"
+              />
+              <figcaption>
+                DashLaunch menu : used for boot behaviour, temperature targets,
+                and fan speed curves
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Living With the Build</h2>
+
+          <figure class="post-image-single">
+            <img
+              src="../images/xbox360/20250819_074058371_iOS.jpg"
+              alt="Aurora Dashboard"
+              loading="lazy"
+            />
+            <figcaption>
+              Aurora Dashboard : a clean, modern replacement for the stock NXE
+              dashboard, with box art for every game
+            </figcaption>
+          </figure>
+
+          <p>
+            <strong>Aurora Dashboard</strong> is a massive improvement over the
+            stock interface. Box art, clean navigation, and everything where
+            you'd expect to find it. <strong>DashLaunch</strong> handles the
+            system-level stuff, boot directly into Aurora, adjust temperature
+            targets, tweak fan curves. The
+            <strong>update manager</strong> handles game updates, and lets you
+            roll back to older versions where useful (some racing games remove
+            cars from their roster when licensing deals expire, you can get them
+            back).
+          </p>
+
+          <h2>Wrapping Up</h2>
+
+          <p>
+            This was the build that made me take modding seriously. I'd bought
+            the 360 in mid-2024, spent months being scared of the PLL point,
+            nearly shipped it off to someone else, and then decided to invest in
+            a proper setup and do it myself. I'm glad I did.
+          </p>
+
+          <p>
+            The precision needed for the Corona V3 pushed me harder than
+            anything I'd done before. Scraping solder mask on a live production
+            board under a microscope, checking diode values, verifying every
+            point twice. This build taught me habits I carry into every project
+            now.
+          </p>
+
+          <p>
+            Between the clean boot times, fresh thermal paste, and the full
+            Aurora/DashLaunch setup, this console feels genuinely reborn. Worth
+            every minute of the process.
+          </p>
+
+          <div class="post-shoutouts">
+            <h3>Shoutouts</h3>
+            <ul>
+              <li>
+                MrMario2011 on YouTube : The most comprehensive RGH tutorial
+                channel out there
+              </li>
+              <li>
+                <a href="https://consolemods.org" target="_blank" rel="noopener"
+                  >ConsoleMods Wiki</a
+                >
+                : excellent documentation and high-res solder point photos
+              </li>
+              <li>
+                Xbox360Hub community forum : filled in the gaps around custom
+                dashboard setup
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <nav class="post-nav container">
+          <a href="switch-lite-picofly.html" class="post-nav-back"
+            >← Switch Lite</a
+          >
+          <a href="dreamcast-va0.html" class="post-nav-next"
+            >Sega Dreamcast →</a
+          >
+        </nav>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner container">
+        <span class="footer-logo">MittsMods</span>
+        <p>
+          Perth, WA · Console modding & tinkering ·
+          <a href="mailto:mittsmods@outlook.com">mittsmods@outlook.com</a>
+        </p>
+        <p class="footer-copy">
+          © 2026 Dimitri. Built from scratch and hosted on GitHub Pages.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
