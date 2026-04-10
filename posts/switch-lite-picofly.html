@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Switch Lite: Clear Shell, Hall Sticks & Picofly - MittsMods</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="post.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav">
+        <a href="../index.html" class="nav-logo">MittsMods</a>
+        <ul class="nav-links">
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../about.html">About</a></li>
+          <li><a href="../projects.html" class="active">Projects</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <article class="post-article">
+        <header class="post-header container">
+          <div class="post-header-meta">
+            <span class="post-cat cat-mods">Mods / Nintendo</span>
+            <time>June 25, 2025</time>
+          </div>
+          <h1 class="post-title">
+            Switch Lite: Clear Shell, Hall Sticks, and a Picofly Modchip
+            (RP2040)
+          </h1>
+          <p class="post-lead">
+            Shell swap, drift-proof joysticks, fresh thermal paste, and a
+            wire-free Picofly modchip. This build took my favourite handheld and
+            turned it into the best version of itself, and it's now one of my
+            all-time favourite projects.
+          </p>
+
+          <div class="post-summary-card">
+            <h3>Build Summary</h3>
+            <ul>
+              <li>
+                <strong>Console:</strong> Nintendo Switch Lite (Mariko V2)
+              </li>
+              <li>
+                <strong>Shell:</strong> eXtremeRate Clear Atomic Purple + black
+                buttons
+              </li>
+              <li><strong>Sticks:</strong> GuliKit Hall Effect joysticks</li>
+              <li>
+                <strong>Cooling:</strong> Arctic MX4 repaste, heat pipe coupling
+              </li>
+              <li>
+                <strong>Modchip:</strong> RP2040 Picofly (Switch Lite-specific,
+                wire-free)
+              </li>
+              <li>
+                <strong>Tools:</strong> Horusdy 2-in-1 @ 350°C, Essmentuin flux,
+                Kapton tape, USB microscope, multimeter
+              </li>
+              <li>
+                <strong>Result:</strong> Improved thermals, overclocking,
+                docked-mode rendering, homebrew, and a clean Atomic Purple look
+              </li>
+            </ul>
+          </div>
+        </header>
+
+        <div class="post-body container">
+          <p>
+            The Switch Lite is my favourite current handheld. The small form
+            factor reminds me of the PSP and PS Vita; Pocketable, purpose-built
+            for handheld, no pretending to be a TV console. The stock grey and
+            white colour scheme though? Gross and boring (in my professional
+            opinion). And Nintendo's joysticks? I'm sure we've all heard how
+            reliable they are.
+          </p>
+
+          <p>
+            This build started as a shell swap and ended up being the most
+            comprehensive mod I've done to a modern handheld. A new shell,
+            drift-proof sticks, a thermal repaste, and a Picofly modchip. Each
+            one justified on its own, but better together.
+          </p>
+
+          <h2>Why This Build?</h2>
+
+          <p>Two main reasons drove the modchip install specifically:</p>
+
+          <p>
+            <strong>1. Improving my micro-soldering.</strong> The Picofly has
+            small pads, tiny components, and requires precision. At the time,
+            the Dreamcast resistor arrays were behind me and this was perfect
+            practice.
+          </p>
+
+          <p>
+            <strong>2. Unlocking the hardware.</strong> I bought the whole
+            silicon, I want to use the whole silicon. Overclocking, forcing
+            docked-mode rendering for better textures and resolution, backing up
+            physical cartridges, and running homebrew apps were all on the list.
+          </p>
+
+          <h2>Shell Swap - Atomic Purple</h2>
+
+          <p>
+            The eXtremeRate Clear Atomic Purple kit includes a full replacement
+            shell, buttons, and all the small trim pieces. The inspiration was
+            the Atomic Purple Game Boy Color, one of the best colourways
+            Nintendo ever produced, and it translates beautifully to the Switch
+            Lite form factor.
+          </p>
+
+          <ul class="post-list">
+            <li>
+              Clear Atomic Purple shell with black buttons: inspired by the GBC
+              Atomic Purple
+            </li>
+            <li>
+              Full kit replacement: shell, buttons, triggers, and all internal
+              trim pieces
+            </li>
+            <li>Quality matches stock: same material feel, same tolerances</li>
+            <li>
+              The modchip is essentially invisible from the outside through the
+              clear shell
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/switch-lite/20250819_045657224_iOS.jpg"
+                alt="Finished Switch Lite in Atomic Purple shell"
+                loading="lazy"
+              />
+              <figcaption>
+                Finished build in the Clear Atomic Purple shell: the modchip is
+                visible inside but invisible in normal use
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/switch-lite/20250819_045629104_iOS.jpg"
+                alt="Switch Lite finished build side view"
+                loading="lazy"
+              />
+              <figcaption>
+                Side profile of the finished build: same dimensions as stock,
+                very different look
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>GuliKit Hall Effect Joysticks</h2>
+
+          <p>
+            Nintendo's joystick design uses physical wipers that wear down over
+            time, leading to the infamous Joy-Con drift. Hall effect sticks use
+            contactless magnets to read position instead, and they cannot drift
+            mechanically.
+          </p>
+
+          <ul class="post-list">
+            <li>Drop-in replacement for stock Switch Lite joysticks</li>
+            <li>
+              Contactless magnetic position sensin. No wiper contact, no drift
+            </li>
+            <li>
+              Premium feel, tighter response, minimal deadzone compared to stock
+            </li>
+            <li>
+              Preventative maintenance: getting to Switch Lite sticks for
+              replacement later is painful
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/switch-lite/20250819_045640139_iOS.jpg"
+                alt="Switch Lite hall effect sticks installed"
+                loading="lazy"
+              />
+              <figcaption>
+                GuliKit hall effect sticks installed, same footprint as stock,
+                significantly better feel
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/switch-lite/20250819_045652545_iOS.jpg"
+                alt="Switch Lite internals with new sticks"
+                loading="lazy"
+              />
+              <figcaption>
+                Internal view with hall effect sticks and Picofly modchip
+                installed
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Thermal Repaste</h2>
+
+          <p>
+            While inside, I cleaned and replaced the thermal paste. Arctic MX4
+            was applied across both the SoC and the heat pipe, deliberately
+            heavy on the heat pipe to couple the back metal plate and act as an
+            extended heatsink surface.
+          </p>
+
+          <ul class="post-list">
+            <li>Arctic MX4 on the SoC and heat pipe</li>
+            <li>
+              Back metal plate now acts as an extended heatsink via the heat
+              pipe coupling
+            </li>
+            <li>
+              Fan runs quieter under load, better heat transfer means less
+              aggressive fan response
+            </li>
+          </ul>
+
+          <h2>Picofly Modchip Install</h2>
+
+          <p>
+            The Switch Lite uses a Mariko V2 board, which differs from the
+            standard V2 Switch in that it has differently shaped metal shields
+            and a smaller overall footprint. I bought a Lite-specific Picofly
+            board designed to fit without extra wiring. One small catch is that
+            the corner of the SoC's metal shield needed trimming to make it fit.
+          </p>
+
+          <div class="post-callout">
+            <strong>Board tilt:</strong> With the motherboard still in the
+            shell, the installed joysticks make it tilt at an angle. Factor this
+            into your workflow, as it makes soldering slightly more awkward. I
+            added a folded cloth underneath to level it out.
+          </div>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/switch-lite/20250622_072356345_iOS.jpg"
+                alt="Picofly modchip installed on Switch Lite board"
+                loading="lazy"
+              />
+              <figcaption>
+                Picofly RP2040 installed on the Switch Lite board, the
+                Lite-specific version.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/switch-lite/20250622_072354182_iOS.jpg"
+                alt="Modchip and surrounding area"
+                loading="lazy"
+              />
+              <figcaption>
+                Modchip and surrounding board area and Kapton tape over the SoC
+                resistors to prevent bridging with the heatsink
+              </figcaption>
+            </figure>
+          </div>
+
+          <ul class="post-list">
+            <li>
+              Kapton tape over the SoC resistors to prevent accidental bridges
+              with the heatsink
+            </li>
+            <li>All solder points checked visually under the microscope</li>
+            <li>
+              Continuity and resistance verified with a multimeter (diode values
+              from the NX-modchip guide)
+            </li>
+            <li>
+              SoC shield corner trimmed to fit, with minimal material removed
+            </li>
+          </ul>
+
+          <div class="post-image-pair">
+            <figure>
+              <img
+                src="../images/switch-lite/20250622_085205126_iOS.jpg"
+                alt="Solder points on Switch Lite board"
+                loading="lazy"
+              />
+              <figcaption>
+                Solder points under inspection. Each one checked for continuity
+                before reassembly
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="../images/switch-lite/20250622_085151134_iOS.jpg"
+                alt="SP2 point and surrounding area"
+                loading="lazy"
+              />
+              <figcaption>
+                SP2 point area. There may or may not be a small burn mark here.
+                It was checked, continuity was confirmed, and the left side is
+                ground only. Moving on.
+              </figcaption>
+            </figure>
+          </div>
+
+          <h2>Testing and Results</h2>
+
+          <p>
+            After all checks, I reconnected the battery and powered on. The
+            console booted instantly, a clean first boot is always a good sign.
+          </p>
+
+          <ul class="post-list">
+            <li>Booted successfully on first attempt ✓</li>
+            <li>
+              All joystick inputs registering correctly with zero deadzone
+            </li>
+            <li>Fan noticeably quieter under load</li>
+            <li>
+              Modchip essentially invisible from outside through the clear shell
+            </li>
+          </ul>
+
+          <h2>Living With the Build</h2>
+
+          <p>
+            Three months on, this is confidently one of my best projects. The
+            hall sticks are snappy and precise. The clear shell looks exactly
+            how I wanted. The modchip is invisible and stable. Some homebrew
+            highlights:
+          </p>
+
+          <ul class="post-list">
+            <li>
+              <strong>Moonlight</strong> : game streaming from my PC, works
+              flawlessly over local network
+            </li>
+            <li>
+              <strong>RetroArch</strong> : retro emulation, the Switch hardware
+              handles most systems up to PS1/N64 well
+            </li>
+            <li>
+              <strong>PPSSPP / Flycast</strong> : dedicated PSP and Dreamcast
+              emulators
+            </li>
+            <li>
+              <strong>ReverseNX</strong> : forces docked-mode rendering in
+              handheld, noticeably better image quality
+            </li>
+            <li>
+              <strong>sys-clk</strong> : CPU, GPU, and memory clock overclocking
+              utility
+            </li>
+            <li><strong>Tinfoil</strong> : game save and update management</li>
+          </ul>
+
+          <div class="post-callout post-callout-warning">
+            <strong>Battery life note:</strong> Overclocking does reduce battery
+            life when active. I keep it at stock clocks for most gaming and only
+            push it for specific titles where the resolution/framerate
+            improvement is worth it.
+          </div>
+
+          <h2>Wrapping Up</h2>
+
+          <p>
+            This build is a culmination of the skills I'd built up: shell swaps,
+            micro-soldering, thermal work, and the patience to check everything
+            twice before powering on. It's the most personal of the three builds
+            I've documented, because it's a console I use every day.
+          </p>
+
+          <p>
+            The OLED screen mod is still sold out everywhere. When it becomes
+            available, this build isn't finished yet.
+          </p>
+
+          <div class="post-shoutouts">
+            <h3>Shoutouts</h3>
+            <ul>
+              <li>
+                <a href="https://gbatemp.net" target="_blank" rel="noopener"
+                  >GBAtemp forums</a
+                >
+                : extensive documentation and community support
+              </li>
+              <li>
+                <a href="https://nx-modchip.com" target="_blank" rel="noopener"
+                  >NX-modchip installation guide</a
+                >
+                : diode values and installation reference
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <nav class="post-nav container">
+          <a href="../projects.html" class="post-nav-back">← All Projects</a>
+          <a href="xbox-360-rgh3.html" class="post-nav-next">Xbox 360 RGH3 →</a>
+        </nav>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner container">
+        <span class="footer-logo">MittsMods</span>
+        <p>
+          Perth, WA · Console modding & tinkering ·
+          <a href="mailto:mittsmods@outlook.com">mittsmods@outlook.com</a>
+        </p>
+        <p class="footer-copy">
+          © 2026 Dimitri. Built from scratch and hosted on GitHub Pages.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
