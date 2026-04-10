@@ -6,6 +6,7 @@ on:
     paths:
       - "games/frontend/**"
       - ".github/workflows/deploy-games.yml"
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:

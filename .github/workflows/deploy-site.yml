@@ -8,6 +8,8 @@ on:
       - "about.html"
       - "projects.html"
       - "style.css"
+      - "posts/**"
+      - "images/**"
       - ".github/workflows/deploy-site.yml"
 
 jobs:
@@ -20,10 +22,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p /tmp/site
+          cp index.html about.html projects.html style.css /tmp/site/
+          [ -d posts ] && cp -r posts /tmp/site/
+          [ -d images ] && cp -r images /tmp/site/
+
       - name: Deploy static site to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          exclude_assets: ".github,games,README.md,MittsMods.sln"
+          publish_dir: /tmp/site
           keep_files: true
