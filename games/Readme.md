@@ -1,4 +1,4 @@
-# MittsMods — Games Database
+# MittsMods - Games Database
 
 A personal game tracking and logging application. Tracks every game played across my personal Steam Library, and includes sync, IGDB metadata, achievements, ratings, and personal notes.
 
@@ -9,13 +9,13 @@ A personal game tracking and logging application. Tracks every game played acros
 
 ## Stack
 
-| Layer    | Tech                                                  |
-|----------|-------------------------------------------------------|
-| Frontend | React + TypeScript (Vite), deployed to GitHub Pages   |
-| Backend  | C# ASP.NET Core 10 Web API, deployed to Railway       |
-| Database | PostgreSQL via Entity Framework Core                  |
-| APIs     | Steam Web API, IGDB via Twitch OAuth                  |
-| CI/CD    | GitHub Actions — auto deploys on push to `main`       |
+| Layer    | Tech                                                |
+| -------- | --------------------------------------------------- |
+| Frontend | React + TypeScript (Vite), deployed to GitHub Pages |
+| Backend  | C# ASP.NET Core 10 Web API, deployed to Railway     |
+| Database | PostgreSQL via Entity Framework Core                |
+| APIs     | Steam Web API, IGDB via Twitch OAuth                |
+| CI/CD    | GitHub Actions — auto deploys on push to `main`     |
 
 ---
 
@@ -56,6 +56,7 @@ games/
 ## Local Development
 
 ### Prerequisites
+
 - .NET 10 SDK
 - Node.js 18+
 - PostgreSQL (local instance)
@@ -105,12 +106,13 @@ Frontend runs at: `http://localhost:5173`
 
 ## Deployment
 
-| Service | Platform | Trigger |
-|---------|----------|---------|
+| Service  | Platform     | Trigger                                       |
+| -------- | ------------ | --------------------------------------------- |
 | Frontend | GitHub Pages | Push to `main` (changes in `games/frontend/`) |
-| Backend | Railway | Push to `main` (changes in `games/backend/`) |
+| Backend  | Railway      | Push to `main` (changes in `games/backend/`)  |
 
 Railway environment variables required:
+
 ```
 DATABASE_URL        (injected automatically from Railway Postgres)
 ASPNETCORE_ENVIRONMENT = Production
