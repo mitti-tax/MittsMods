@@ -55,3 +55,52 @@ jobs:
 
       - name: Build
         run: dotnet build games/backend/Mittsmodsapi.csproj --no-restore -c Release
+
+  api-smoke:
+    name: API smoke test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mittsmods_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # An untranslatable LINQ query compiles cleanly and only fails when it
+      # runs, so the API is exercised against a real Postgres.
+      - name: Start the API
+        env:
+          ASPNETCORE_URLS: http://127.0.0.1:5080
+          ConnectionStrings__DefaultConnection: "Host=127.0.0.1;Port=5432;Database=mittsmods_test;Username=postgres;Password=postgres"
+          ADMIN_PASSWORD: smoke-test-password
+        run: |
+          dotnet run --project games/backend/Mittsmodsapi.csproj > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Smoke test
+        env:
+          API: http://127.0.0.1:5080
+          ADMIN_PASSWORD: smoke-test-password
+        run: games/scripts/smoke-test.sh
+
+      - name: API log
+        if: always()
+        run: tail -n 200 api.log
