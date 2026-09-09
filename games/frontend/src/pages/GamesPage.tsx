@@ -214,6 +214,16 @@ export default function GamesPage({
     setTotal((current) => Math.max(current - 1, 0));
   }, []);
 
+  const openGame = useCallback(
+    (game: GameListItem) => setFilter({ game: String(game.id) }),
+    [setFilter],
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => setFilter({ q: value || undefined }),
+    [setFilter],
+  );
+
   const requireAuth = (action: () => void) => {
     if (!isLoggedIn) {
       setShowPermissionDenied(true);
@@ -222,36 +232,42 @@ export default function GamesPage({
     action();
   };
 
-  const handleQuickStatus = async (game: GameListItem, status: PlayStatus) => {
-    const entry = primaryEntry(game);
-    if (!entry) return;
+  const handleQuickStatus = useCallback(
+    async (game: GameListItem, status: PlayStatus) => {
+      const entry = primaryEntry(game);
+      if (!entry) return;
 
-    try {
-      replaceGame(
-        await api.updateEntry(
-          game.id,
-          entry.id,
-          existingEntryToPayload(entry, { status }),
-        ),
-      );
-    } catch (cause) {
-      showToast(
-        cause instanceof ApiError ? cause.message : "Update failed.",
-        "error",
-      );
-    }
-  };
+      try {
+        replaceGame(
+          await api.updateEntry(
+            game.id,
+            entry.id,
+            existingEntryToPayload(entry, { status }),
+          ),
+        );
+      } catch (cause) {
+        showToast(
+          cause instanceof ApiError ? cause.message : "Update failed.",
+          "error",
+        );
+      }
+    },
+    [replaceGame, showToast],
+  );
 
-  const handleToggleFavourite = async (game: GameListItem) => {
-    try {
-      replaceGame(await api.toggleFavourite(game.id));
-    } catch (cause) {
-      showToast(
-        cause instanceof ApiError ? cause.message : "Update failed.",
-        "error",
-      );
-    }
-  };
+  const handleToggleFavourite = useCallback(
+    async (game: GameListItem) => {
+      try {
+        replaceGame(await api.toggleFavourite(game.id));
+      } catch (cause) {
+        showToast(
+          cause instanceof ApiError ? cause.message : "Update failed.",
+          "error",
+        );
+      }
+    },
+    [replaceGame, showToast],
+  );
 
   const handleExport = async () => {
     setExporting(true);
@@ -349,7 +365,7 @@ export default function GamesPage({
         <SearchBar
           value={filters.q}
           inputRef={searchInput}
-          onChange={(value) => setFilter({ q: value || undefined })}
+          onChange={handleSearchChange}
         />
 
         <div className="filter-bar" role="group" aria-label="Filter by status">
@@ -477,7 +493,7 @@ export default function GamesPage({
                   editMode={editMode && isLoggedIn}
                   canFavourite={isLoggedIn}
                   eagerCover={index < 6}
-                  onOpen={() => setFilter({ game: String(game.id) })}
+                  onOpen={openGame}
                   onQuickStatus={handleQuickStatus}
                   onToggleFavourite={handleToggleFavourite}
                 />

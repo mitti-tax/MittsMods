@@ -302,9 +302,15 @@ export const api = {
   },
 
   verify: async (): Promise<boolean> => {
-    if (!getToken()) return false;
+    const token = getToken();
+    if (!token) return false;
     try {
-      await request<{ valid: boolean }>("/api/auth/verify", { method: "POST" });
+      // The header alone would do; the body keeps the request valid for the
+      // older server contract too.
+      await request<{ valid: boolean }>("/api/auth/verify", {
+        method: "POST",
+        body: { token },
+      });
       return true;
     } catch {
       // request() already dropped the token on a 401.

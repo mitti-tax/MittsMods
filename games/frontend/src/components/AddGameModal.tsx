@@ -130,7 +130,7 @@ export default function AddGameModal({
 
   return (
     <Modal title="Add Game" onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="form-group">
           <label className="form-label" htmlFor="igdb-search">
             Search IGDB

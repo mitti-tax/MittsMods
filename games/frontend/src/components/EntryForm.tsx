@@ -23,6 +23,9 @@ export default function EntryForm({
     next: EntryFormValue[K],
   ) => onChange({ ...value, [key]: next });
 
+  // min/max/step stay for the spinners and the mobile keyboard, but the forms
+  // are noValidate: validateEntry is the single path, so every message is
+  // styled the same and announced, including the cross-field date rule.
   return (
     <>
       <div className="form-grid">

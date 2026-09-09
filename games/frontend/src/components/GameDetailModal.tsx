@@ -232,7 +232,7 @@ export default function GameDetailModal({
               {game?.userEntries.map((entry) => (
                 <li className="entry-card" key={entry.id}>
                   {editing.kind === "edit" && editing.entryId === entry.id ? (
-                    <form onSubmit={handleSave}>
+                    <form onSubmit={handleSave} noValidate>
                       <EntryForm
                         value={form}
                         platforms={platforms}
@@ -277,7 +277,7 @@ export default function GameDetailModal({
             </ul>
 
             {editing.kind === "new" && (
-              <form onSubmit={handleSave} className="entry-card">
+              <form onSubmit={handleSave} className="entry-card" noValidate>
                 <h4 className="detail-section-title">New entry</h4>
                 <EntryForm
                   value={form}
