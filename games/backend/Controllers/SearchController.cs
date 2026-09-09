@@ -1,8 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using MittsModsApi.DTOs;
-using MittsModsApi.Security;
 using MittsModsApi.Services;
 
 namespace MittsModsApi.Controllers;
@@ -18,18 +15,13 @@ public class SearchController : ControllerBase
         _igdb = igdb;
     }
 
-    /// <summary>
-    /// GET /api/search?q= — IGDB title lookup.
-    /// Admin only: it is only reachable from the add-game form, and it spends
-    /// a shared third-party quota that anyone could otherwise drain.
-    /// </summary>
     [HttpGet]
-    [AdminOnly]
-    [EnableRateLimiting(RateLimitPolicies.External)]
-    public async Task<ActionResult<List<IgdbGameResult>>> Search(
-        [FromQuery, Required, StringLength(100, MinimumLength = 2)] string q,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<List<IgdbGameResult>>> Search([FromQuery] string q)
     {
-        return Ok(await _igdb.SearchAsync(q, cancellationToken));
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return BadRequest("Search query must be at least 2 characters.");
+
+        var results = await _igdb.SearchAsync(q);
+        return Ok(results);
     }
 }

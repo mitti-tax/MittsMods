@@ -1,15 +1,15 @@
-# .NET build output
-bin/
-obj/
+# .NET
 backend/bin/
 backend/obj/
 backend/*.db
 backend/*.db-shm
 backend/*.db-wal
 
-# Secrets — never commit API keys or the admin password
+obj/
+bin/
+
+# Secrets — never commit API keys
 backend/appsettings.Development.json
-backend/appsettings.*.Local.json
 
 # Node
 frontend/node_modules/

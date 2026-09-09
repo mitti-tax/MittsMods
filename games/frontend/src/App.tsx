@@ -1,200 +1,186 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import GamesPage from "./pages/GamesPage";
 import LoginModal from "./components/LoginModal";
-import ToastProvider from "./components/ToastProvider";
-import { useToast } from "./hooks/toast";
 import { useAuth } from "./hooks/useAuth";
-import { useHashRoute, type RouteParams } from "./hooks/useHashRoute";
-import { ApiError, api } from "./api/client";
+import { api } from "./api/client";
 import "./index.css";
 
-export default function App() {
-  return (
-    <ToastProvider>
-      <AppShell />
-    </ToastProvider>
-  );
-}
+type Page = "dashboard" | "games" | "backlog";
 
-function AppShell() {
-  const { route, navigate, replace } = useHashRoute();
-  const { isLoggedIn, checking, login, logout } = useAuth();
-  const { showToast } = useToast();
-
+function App() {
+  const [page, setPage] = useState<Page>("dashboard");
   const [syncing, setSyncing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  // Bumped after a Steam sync to force the pages to refetch.
-  const [dataVersion, setDataVersion] = useState(0);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
 
-  // Unknown hashes (including an empty one on first load) land on the dashboard.
-  useEffect(() => {
-    if (route.path !== "/" && route.path !== "/library") replace("/");
-  }, [route.path, replace]);
+  const { isLoggedIn, checking, login, logout } = useAuth();
 
-  const go = useCallback(
-    (path: string, params?: RouteParams) => {
-      navigate(path, params);
-      setSidebarOpen(false);
-    },
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSidebarOpen(false);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [sidebarOpen]);
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleSync = async () => {
     if (!isLoggedIn) {
       setShowLogin(true);
       return;
     }
-
     setSyncing(true);
     try {
       const result = await api.syncSteam();
-      const parts = [`${result.added} added`, `${result.updated} updated`];
-      if (result.remaining > 0) parts.push(`${result.remaining} left — sync again`);
-
-      showToast(`Steam sync: ${parts.join(", ")}`, "success");
-      setDataVersion((version) => version + 1);
-    } catch (cause) {
       showToast(
-        cause instanceof ApiError ? cause.message : "Steam sync failed.",
-        "error",
+        `Synced — ${result.added} added, ${result.updated} updated`,
+        "success",
       );
+      setPage((p) => {
+        setTimeout(() => setPage(p), 0);
+        return "dashboard";
+      });
+    } catch {
+      showToast("Steam sync failed", "error");
     } finally {
       setSyncing(false);
     }
   };
 
-  if (checking) {
-    return <div className="loading">LOADING…</div>;
-  }
+  const navigate = (p: Page) => {
+    setPage(p);
+    setSidebarOpen(false);
+  };
 
-  const params = new URLSearchParams(route.search);
-  const isLibrary = route.path === "/library";
-  const libraryFilter = params.get("status") ?? (params.get("favourite") ? "fav" : "");
+  if (checking) {
+    return <div className="loading">LOADING...</div>;
+  }
 
   return (
     <div className="app">
-      <a className="skip-link" href="#main-content">
-        Skip to content
-      </a>
-
-      <header className="mobile-topbar">
+      {/* Mobile top bar */}
+      <div className="mobile-topbar">
         <span className="mobile-topbar-logo">GameLog</span>
-        <button
-          type="button"
-          className="hamburger"
-          aria-label={sidebarOpen ? "Close menu" : "Open menu"}
-          aria-expanded={sidebarOpen}
-          aria-controls="sidebar"
-          onClick={() => setSidebarOpen((open) => !open)}
-        >
+        <button className="hamburger" onClick={() => setSidebarOpen((o) => !o)}>
           {sidebarOpen ? "✕" : "☰"}
         </button>
-      </header>
+      </div>
 
+      {/* Sidebar overlay */}
       <div
         className={`sidebar-overlay ${sidebarOpen ? "visible" : ""}`}
         onClick={() => setSidebarOpen(false)}
-        aria-hidden="true"
       />
 
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} id="sidebar">
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
           <h1>GameLog</h1>
           <span>by MittsMods</span>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Main">
-          <NavItem
-            icon="◈"
-            label="Dashboard"
-            active={route.path === "/"}
-            onClick={() => go("/")}
-          />
-          <NavItem
-            icon="▦"
-            label="All Games"
-            active={isLibrary && libraryFilter === ""}
-            onClick={() => go("/library")}
-          />
-          <NavItem
-            icon="◎"
-            label="Backlog"
-            active={isLibrary && libraryFilter === "Backlog"}
-            onClick={() => go("/library", { status: "Backlog" })}
-          />
-          <NavItem
-            icon="★"
-            label="Favourites"
-            active={isLibrary && libraryFilter === "fav"}
-            onClick={() => go("/library", { favourite: "1" })}
-          />
+        <nav className="sidebar-nav">
+          <div
+            className={`nav-item ${page === "dashboard" ? "active" : ""}`}
+            onClick={() => navigate("dashboard")}
+          >
+            <span className="nav-icon">◈</span> Dashboard
+          </div>
+          <div
+            className={`nav-item ${page === "games" ? "active" : ""}`}
+            onClick={() => navigate("games")}
+          >
+            <span className="nav-icon">▦</span> All Games
+          </div>
+          <div
+            className={`nav-item ${page === "backlog" ? "active" : ""}`}
+            onClick={() => navigate("backlog")}
+          >
+            <span className="nav-icon">◎</span> Backlog
+          </div>
         </nav>
 
         <div className="sidebar-bottom">
+          {/* Sync — only shown when logged in */}
           {isLoggedIn && (
             <button
-              type="button"
               className="sync-btn"
               onClick={handleSync}
               disabled={syncing}
+              style={{ marginBottom: "10px" }}
             >
-              {syncing ? "SYNCING…" : "⟳ SYNC STEAM"}
+              {syncing ? "SYNCING..." : "⟳ SYNC STEAM"}
             </button>
           )}
 
+          {/* Login / Logout */}
           {isLoggedIn ? (
-            <button type="button" className="nav-item nav-item-button" onClick={logout}>
-              <span className="nav-icon" aria-hidden="true">
-                ⏻
-              </span>{" "}
-              Log Out
+            <button
+              className="nav-item"
+              style={{
+                fontSize: "11px",
+                display: "flex",
+                padding: "8px 0",
+                width: "100%",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                marginBottom: "4px",
+                color: "var(--text-faint)",
+              }}
+              onClick={logout}
+            >
+              <span className="nav-icon">⏻</span> Log Out
             </button>
           ) : (
             <button
-              type="button"
-              className="nav-item nav-item-button is-accent"
+              className="nav-item"
+              style={{
+                fontSize: "11px",
+                display: "flex",
+                padding: "8px 0",
+                width: "100%",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                marginBottom: "4px",
+                color: "var(--blue)",
+              }}
               onClick={() => setShowLogin(true)}
             >
-              <span className="nav-icon" aria-hidden="true">
-                →
-              </span>{" "}
-              Admin Login
+              <span className="nav-icon">→</span> Admin Login
             </button>
           )}
 
-          <a href="https://mitti-tax.github.io/MittsMods/" className="nav-item">
-            <span className="nav-icon" aria-hidden="true">
-              ←
-            </span>{" "}
-            MittsMods
+          <a
+            href="https://mitti-tax.github.io/MittsMods/"
+            className="nav-item"
+            style={{ fontSize: "11px", display: "flex", padding: "8px 0" }}
+          >
+            <span className="nav-icon">←</span> MittsMods
           </a>
         </div>
       </aside>
 
-      <main className="main" id="main-content">
-        {isLibrary ? (
+      {/* Main content */}
+      <main className="main">
+        {page === "dashboard" && (
+          <Dashboard onNavigate={navigate} isLoggedIn={isLoggedIn} />
+        )}
+        {page === "games" && (
           <GamesPage
-            key={`library-${dataVersion}`}
-            search={route.search}
+            filter="all"
             isLoggedIn={isLoggedIn}
             onLoginRequest={() => setShowLogin(true)}
-            onNavigate={navigate}
           />
-        ) : (
-          <Dashboard key={`dashboard-${dataVersion}`} onNavigate={navigate} />
+        )}
+        {page === "backlog" && (
+          <GamesPage
+            filter="Backlog"
+            isLoggedIn={isLoggedIn}
+            onLoginRequest={() => setShowLogin(true)}
+          />
         )}
       </main>
 
@@ -205,32 +191,10 @@ function AppShell() {
           login={login}
         />
       )}
+
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
     </div>
   );
 }
 
-function NavItem({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: string;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`nav-item nav-item-button ${active ? "active" : ""}`}
-      aria-current={active ? "page" : undefined}
-      onClick={onClick}
-    >
-      <span className="nav-icon" aria-hidden="true">
-        {icon}
-      </span>{" "}
-      {label}
-    </button>
-  );
-}
+export default App;

@@ -1,6 +1,8 @@
 namespace MittsModsApi.DTOs;
 
-/// <summary>A game from the Steam library fetch.</summary>
+/// <summary>
+/// A game from the Steam library fetch.
+/// </summary>
 public class SteamGameResult
 {
     public int SteamAppId { get; set; }
@@ -9,7 +11,9 @@ public class SteamGameResult
     public string? CoverUrl { get; set; }
 }
 
-/// <summary>Achievement data for a single Steam app.</summary>
+/// <summary>
+/// Achievement data for a single Steam app.
+/// </summary>
 public class SteamAchievementResult
 {
     public int AppId { get; set; }
@@ -17,25 +21,13 @@ public class SteamAchievementResult
     public int? AchievementsTotal { get; set; }
 }
 
-/// <summary>Summary returned after a sync operation.</summary>
+/// <summary>
+/// Summary returned after a sync operation.
+/// </summary>
 public class SteamSyncResult
 {
-    /// <summary>Games newly imported into the library.</summary>
     public int Added { get; set; }
-
-    /// <summary>Tracked games whose hours or achievements moved.</summary>
     public int Updated { get; set; }
-
-    /// <summary>Tracked games that were already up to date.</summary>
-    public int Unchanged { get; set; }
-
-    /// <summary>Tracked games with no PC entry to update.</summary>
     public int Skipped { get; set; }
-
-    /// <summary>
-    /// New games left over after this batch. Run the sync again to import them.
-    /// </summary>
-    public int Remaining { get; set; }
-
     public List<string> Games { get; set; } = new();
 }

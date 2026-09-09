@@ -1,5 +1,6 @@
+// src/components/LoginModal.tsx
+
 import { useState } from "react";
-import Modal from "./Modal";
 
 interface Props {
   onClose: () => void;
@@ -12,72 +13,92 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!password.trim() || loading) return;
-
+  const handleSubmit = async () => {
+    if (!password.trim()) return;
     setLoading(true);
     setError("");
-
     const result = await login(password);
     setLoading(false);
-
     if (result.success) {
       onSuccess();
       onClose();
-      return;
+    } else {
+      setError(result.message ?? "Incorrect password.");
     }
+  };
 
-    setError(result.message ?? "Incorrect password.");
-    setPassword("");
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSubmit();
   };
 
   return (
-    <Modal title="Admin Login" onClose={onClose} maxWidth="380px">
-      {/* A real form, so password managers offer to fill and save it. */}
-      <form onSubmit={handleSubmit}>
-        <p className="dialog-message">
-          Enter the admin password to edit the game library.
-        </p>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="admin-password">
-            Password
-          </label>
-          <input
-            id="admin-password"
-            className="form-input"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "admin-password-error" : undefined}
-            autoFocus
-          />
-        </div>
-
-        {error && (
-          <p className="form-error" id="admin-password-error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="btn-row">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal"
+        style={{ maxWidth: "380px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <span className="modal-title">Admin Login</span>
+          <button className="modal-close" onClick={onClose}>
+            ✕
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading || !password.trim()}
+        </div>
+        <div className="modal-body">
+          <p
+            style={{
+              fontSize: "13px",
+              color: "var(--text-muted)",
+              marginBottom: "20px",
+            }}
           >
-            {loading ? "Checking…" : "Log In"}
-          </button>
+            Enter the admin password to edit your game library.
+          </p>
+
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input
+              className="form-input"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleKey}
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <div
+              style={{
+                fontSize: "12px",
+                color: "var(--red)",
+                fontFamily: "var(--font-mono)",
+                marginBottom: "12px",
+                padding: "8px 10px",
+                background: "rgba(224,85,85,0.08)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid rgba(224,85,85,0.2)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div className="btn-row">
+            <button className="btn btn-ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              disabled={loading || !password.trim()}
+            >
+              {loading ? "Checking..." : "Log In"}
+            </button>
+          </div>
         </div>
-      </form>
-    </Modal>
+      </div>
+    </div>
   );
 }
