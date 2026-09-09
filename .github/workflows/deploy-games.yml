@@ -8,6 +8,10 @@ on:
       - ".github/workflows/deploy-games.yml"
   workflow_dispatch:
 
+concurrency:
+  group: deploy-games
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -22,16 +26,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: games/frontend/package-lock.json
 
+      # ci, not install: the deployed bundle should match the committed lockfile.
       - name: Install dependencies
         working-directory: games/frontend
-        run: npm install
+        run: npm ci
 
+      # The API URL lives in .env.production. The secret is an optional
+      # override, applied only when it is actually set — passing it through
+      # unconditionally would export an empty VITE_API_URL and ship a build
+      # that calls GitHub Pages instead of the API.
       - name: Build
         working-directory: games/frontend
-        run: npm run build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          SECRET_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          if [ -n "$SECRET_API_URL" ]; then
+            export VITE_API_URL="$SECRET_API_URL"
+          fi
+          npm run build
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
