@@ -75,15 +75,18 @@ if (string.IsNullOrWhiteSpace(rawUrl))
         "No database configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
 }
 
-// Railway's internal Postgres presents a self-signed certificate, so the
-// default trusts it. Set DATABASE_TRUST_SERVER_CERTIFICATE=false when the
-// database presents a certificate from a real CA.
-var trustServerCertificate = !string.Equals(
-    Environment.GetEnvironmentVariable("DATABASE_TRUST_SERVER_CERTIFICATE"),
-    "false",
-    StringComparison.OrdinalIgnoreCase);
+// Npgsql's Require encrypts the connection without validating the server
+// certificate, which is what Railway's self-signed internal Postgres needs.
+// Set DATABASE_SSL_MODE=VerifyFull when the database presents a certificate
+// from a real CA and the connection should be checked against it.
+var sslMode = Enum.TryParse<Npgsql.SslMode>(
+    Environment.GetEnvironmentVariable("DATABASE_SSL_MODE"),
+    ignoreCase: true,
+    out var configuredSslMode)
+    ? configuredSslMode
+    : Npgsql.SslMode.Require;
 
-var connectionString = ConvertDatabaseUrl(rawUrl, trustServerCertificate);
+var connectionString = ConvertDatabaseUrl(rawUrl, sslMode);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, npgsql =>
@@ -187,7 +190,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // Railway terminates TLS in front of the container, so the scheme and the
     // client IP only survive in the forwarded headers.
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
@@ -276,7 +279,7 @@ static string? NormaliseOrigin(string? value)
         : null;
 }
 
-static string ConvertDatabaseUrl(string url, bool trustServerCertificate)
+static string ConvertDatabaseUrl(string url, Npgsql.SslMode sslMode)
 {
     url = url.Trim();
 
@@ -303,8 +306,7 @@ static string ConvertDatabaseUrl(string url, bool trustServerCertificate)
         Database = database,
         Username = username,
         Password = password,
-        SslMode = Npgsql.SslMode.Require,
-        TrustServerCertificate = trustServerCertificate
+        SslMode = sslMode
     };
 
     return connection.ConnectionString;
