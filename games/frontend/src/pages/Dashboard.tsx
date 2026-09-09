@@ -1,199 +1,384 @@
-import { useEffect, useState } from "react";
-import { api, type Game } from "../api/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ApiError, api } from "../api/client";
+import type { GameListItem, LibraryStats } from "../api/client";
+import type { RouteParams } from "../hooks/useHashRoute";
+import GameCard from "../components/GameCard";
+import CoverImage from "../components/CoverImage";
+import { formatHours, primaryEntry, statusLabel, totalHours } from "../lib/game";
+
+const SLIDE_INTERVAL_MS = 6000;
+const SLIDE_COUNT = 8;
 
 interface Props {
-  onNavigate: (page: "dashboard" | "games" | "backlog") => void;
-  isLoggedIn: boolean;
+  onNavigate: (path: string, params?: RouteParams) => void;
+}
+
+interface DashboardData {
+  stats: LibraryStats;
+  recentlyPlayed: GameListItem[];
+  playing: GameListItem[];
+  recentlyAdded: GameListItem[];
 }
 
 export default function Dashboard({ onNavigate }: Props) {
-  const [games, setGames] = useState<Game[]>([]);
-  const [slide, setSlide] = useState(0);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    api.getGames().then(setGames).catch(console.error);
-  }, []);
+    const controller = new AbortController();
 
-  const slideshowGames = games
-    .filter(
-      (g) =>
-        g.coverUrl &&
-        g.userEntries.some((e) => e.hoursPlayed && e.hoursPlayed > 0),
-    )
-    .sort((a, b) => {
-      const aDate = new Date(a.userEntries[0]?.updatedAt ?? 0).getTime();
-      const bDate = new Date(b.userEntries[0]?.updatedAt ?? 0).getTime();
-      return bDate - aDate;
-    })
-    .slice(0, 8);
+    // Four small, indexed queries instead of downloading the whole library
+    // and reducing it in the browser.
+    Promise.all([
+      api.getStats(controller.signal),
+      api.getGames(
+        { sort: "played", minHours: 0.1, pageSize: SLIDE_COUNT },
+        controller.signal,
+      ),
+      api.getGames({ status: "Playing", sort: "played", pageSize: 6 }, controller.signal),
+      api.getGames({ sort: "added", pageSize: 12 }, controller.signal),
+    ])
+      .then(([stats, recentlyPlayed, playing, recentlyAdded]) => {
+        setData({
+          stats,
+          recentlyPlayed: recentlyPlayed.items.filter((game) => game.coverUrl),
+          playing: playing.items,
+          recentlyAdded: recentlyAdded.items,
+        });
+        setLoading(false);
+      })
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        setLoading(false);
+        setError(
+          cause instanceof ApiError
+            ? cause.message
+            : "Could not load the dashboard.",
+        );
+      });
 
-  useEffect(() => {
-    if (slideshowGames.length < 2) return;
-    const timer = setInterval(
-      () => setSlide((s) => (s + 1) % slideshowGames.length),
-      4000,
-    );
-    return () => clearInterval(timer);
-  }, [slideshowGames.length]);
-  const totalGames = games.length;
-  const completed = games.filter((g) =>
-    g.userEntries.some((e) => e.status === "Completed"),
-  ).length;
-  const playing = games.filter((g) =>
-    g.userEntries.some((e) => e.status === "Playing"),
-  ).length;
-  const totalHours = games.reduce(
-    (sum, g) =>
-      sum + g.userEntries.reduce((s, e) => s + (e.hoursPlayed ?? 0), 0),
-    0,
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  const openGame = useCallback(
+    (game: GameListItem) => onNavigate("/library", { game: game.id }),
+    [onNavigate],
   );
+
+  if (error) {
+    return (
+      <div className="empty-state">
+        <p>{error}</p>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            setError(null);
+            setLoading(true);
+            setReloadKey((key) => key + 1);
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (loading && !data) {
+    return <div className="loading">LOADING…</div>;
+  }
+
+  if (!data) return null;
+
+  const { stats, recentlyPlayed, playing, recentlyAdded } = data;
+
+  // The hero only earns its 420px when it has something to show. A library
+  // with games but nothing played yet skips it rather than claiming
+  // "no games logged" above a stats bar that says otherwise.
+  const showHero = recentlyPlayed.length > 0 || stats.totalGames === 0;
 
   return (
     <>
-      {/* Slideshow */}
-      <div className="hero-slideshow">
-        {slideshowGames.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-            }}
-          >
-            <div className="empty-state">
-              <p>NO GAMES LOGGED YET</p>
-              <p style={{ fontSize: "11px", marginTop: "8px" }}>
-                Log in and use Sync Steam to import your library
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {slideshowGames.map((g, i) => (
-              <div
-                key={g.id}
-                className={`slide ${i === slide ? "active" : ""}`}
-              >
-                <img src={g.coverUrl!} className="slide-bg" alt="" />
-                <img src={g.coverUrl!} className="slide-cover" alt={g.title} />
-                <div className="slide-info">
-                  <div className="slide-title">{g.title}</div>
-                  <div className="slide-meta">
-                    {g.releaseYear && <span>{g.releaseYear}</span>}
-                    {g.userEntries[0] && (
-                      <span className="slide-status">
-                        {g.userEntries[0].status.toUpperCase()}
-                      </span>
-                    )}
-                    {g.userEntries[0]?.hoursPlayed && (
-                      <span>{g.userEntries[0].hoursPlayed}h played</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="slide-dots">
-              {slideshowGames.map((_, i) => (
-                <button
-                  key={i}
-                  className={`slide-dot ${i === slide ? "active" : ""}`}
-                  onClick={() => setSlide(i)}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      {showHero && <Slideshow games={recentlyPlayed} onOpen={openGame} />}
 
-      {/* Stats bar */}
       <div className="stats-bar">
-        <div className="stat-cell">
-          <div className="stat-value">{totalGames}</div>
-          <div className="stat-label">Total Games</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{Math.round(totalHours)}</div>
-          <div className="stat-label">Hours Played</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{completed}</div>
-          <div className="stat-label">Completed</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{playing}</div>
-          <div className="stat-label">Playing Now</div>
-        </div>
+        <Stat value={stats.totalGames} label="Total Games" />
+        <Stat value={Math.round(stats.totalHours)} label="Hours Played" />
+        <Stat value={stats.gamesByStatus.Completed ?? 0} label="Completed" />
+        <Stat value={stats.gamesByStatus.Playing ?? 0} label="Playing Now" />
       </div>
 
-      {playing > 0 && (
-        <div className="section">
-          <div className="section-header">
-            <span className="section-title">Currently Playing</span>
-            <button
-              className="btn btn-ghost"
-              onClick={() => onNavigate("games")}
-            >
-              All Games →
-            </button>
-          </div>
+      <div className="stats-bar stats-bar-secondary">
+        <Stat value={stats.gamesByStatus.Backlog ?? 0} label="Backlog" />
+        <Stat value={stats.favourites} label="Favourites" />
+        <Stat
+          value={stats.averageRating === null ? "—" : stats.averageRating.toFixed(1)}
+          label="Avg Rating"
+        />
+        <Stat
+          value={
+            stats.achievementsTotal > 0
+              ? `${stats.achievementsEarned}/${stats.achievementsTotal}`
+              : "—"
+          }
+          label="Achievements"
+        />
+      </div>
+
+      {playing.length > 0 && (
+        <Section
+          title="Currently Playing"
+          actionLabel="All games →"
+          onAction={() => onNavigate("/library")}
+        >
           <div className="games-grid">
-            {games
-              .filter((g) => g.userEntries.some((e) => e.status === "Playing"))
-              .slice(0, 6)
-              .map((g) => (
-                <GameCard key={g.id} game={g} />
-              ))}
+            {playing.map((game, index) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                eagerCover={index < 6}
+                onOpen={openGame}
+              />
+            ))}
           </div>
-        </div>
+        </Section>
       )}
 
-      <div className="section">
-        <div className="section-header">
-          <span className="section-title">Recently Added</span>
-          <button className="btn btn-ghost" onClick={() => onNavigate("games")}>
-            View all →
-          </button>
-        </div>
-        <div className="games-grid">
-          {[...games]
-            .sort(
-              (a, b) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-            )
-            .slice(0, 12)
-            .map((g) => (
-              <GameCard key={g.id} game={g} />
+      <Section
+        title="Recently Added"
+        actionLabel="View all →"
+        onAction={() => onNavigate("/library", { sort: "added" })}
+      >
+        {recentlyAdded.length === 0 ? (
+          <p className="field-hint">Nothing logged yet.</p>
+        ) : (
+          <div className="games-grid">
+            {recentlyAdded.map((game) => (
+              <GameCard key={game.id} game={game} onOpen={openGame} />
             ))}
-        </div>
-      </div>
+          </div>
+        )}
+      </Section>
+
+      {stats.topPlatforms.length > 0 && (
+        <Section title="Top Platforms">
+          <ul className="platform-stats">
+            {stats.topPlatforms.map((platform) => (
+              <li key={platform.platformId}>
+                <button
+                  type="button"
+                  className="platform-stat"
+                  onClick={() =>
+                    onNavigate("/library", { platform: platform.platformId })
+                  }
+                >
+                  <span className="platform-stat-name">{platform.platformName}</span>
+                  <span className="platform-stat-meta">
+                    {platform.games} {platform.games === 1 ? "game" : "games"}
+                    {formatHours(platform.hours) ? ` · ${formatHours(platform.hours)}` : ""}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
     </>
   );
 }
 
-function GameCard({ game }: { game: Game }) {
-  const entry = game.userEntries[0];
+function Stat({ value, label }: { value: number | string; label: string }) {
   return (
-    <div className="game-card">
-      {game.coverUrl ? (
-        <img src={game.coverUrl} className="game-card-cover" alt={game.title} />
-      ) : (
-        <div className="game-card-cover-placeholder">🎮</div>
-      )}
-      <div className="game-card-body">
-        <div className="game-card-title">{game.title}</div>
-        {entry && (
-          <div className="game-card-meta">
-            <span className={`status-badge status-${entry.status}`}>
-              {entry.status}
-            </span>
-            {entry.hoursPlayed ? (
-              <span className="game-card-hours">{entry.hoursPlayed}h</span>
-            ) : null}
-          </div>
-        )}
-      </div>
+    <div className="stat-cell">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
     </div>
   );
+}
+
+function Section({
+  title,
+  actionLabel,
+  onAction,
+  children,
+}: {
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="section">
+      <div className="section-header">
+        <h2 className="section-title">{title}</h2>
+        {actionLabel && onAction && (
+          <button type="button" className="btn btn-ghost" onClick={onAction}>
+            {actionLabel}
+          </button>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Slideshow({
+  games,
+  onOpen,
+}: {
+  games: GameListItem[];
+  onOpen: (game: GameListItem) => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reduceMotion = usePrefersReducedMotion();
+
+  const count = games.length;
+  // Derived, so a shrinking list can never leave the index out of range.
+  const current = count === 0 ? 0 : index % count;
+
+  useEffect(() => {
+    if (count < 2 || paused || reduceMotion) return;
+
+    const timer = setInterval(
+      () => setIndex((value) => (value + 1) % count),
+      SLIDE_INTERVAL_MS,
+    );
+
+    return () => clearInterval(timer);
+  }, [count, paused, reduceMotion]);
+
+  if (count === 0) {
+    return (
+      <div className="hero-slideshow hero-empty">
+        <div className="empty-state">
+          <p>NO GAMES LOGGED YET</p>
+          <p className="empty-note">
+            Log in and use Sync Steam to import your library
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const step = (delta: number) =>
+    setIndex((value) => (value + delta + count) % count);
+
+  return (
+    <section
+      className="hero-slideshow"
+      aria-label="Recently played"
+      aria-roledescription="carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      {games.map((game, slideIndex) => {
+        const entry = primaryEntry(game);
+        const hours = formatHours(totalHours(game));
+        const active = slideIndex === current;
+
+        return (
+          <div
+            className={`slide ${active ? "active" : ""}`}
+            key={game.id}
+            aria-hidden={!active}
+            inert={!active}
+          >
+            <CoverImage
+              src={game.coverUrl}
+              alt=""
+              className="slide-bg"
+              eager={slideIndex === 0}
+            />
+            <button
+              type="button"
+              className="slide-cover-btn"
+              onClick={() => onOpen(game)}
+              tabIndex={active ? 0 : -1}
+            >
+              <CoverImage
+                src={game.coverUrl}
+                alt={`${game.title} — open details`}
+                className="slide-cover"
+                eager={slideIndex === 0}
+              />
+            </button>
+            <div className="slide-info">
+              <div className="slide-title">{game.title}</div>
+              <div className="slide-meta">
+                {game.releaseYear && <span>{game.releaseYear}</span>}
+                {entry && (
+                  <span className="slide-status">
+                    {statusLabel(entry.status).toUpperCase()}
+                  </span>
+                )}
+                {hours && <span>{hours} played</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {count > 1 && (
+        <>
+          <button
+            type="button"
+            className="slide-nav slide-prev"
+            aria-label="Previous game"
+            onClick={() => step(-1)}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="slide-nav slide-next"
+            aria-label="Next game"
+            onClick={() => step(1)}
+          >
+            ›
+          </button>
+
+          <div className="slide-dots" role="tablist" aria-label="Choose a game">
+            {games.map((game, dotIndex) => (
+              <button
+                key={game.id}
+                type="button"
+                role="tab"
+                aria-selected={dotIndex === current}
+                aria-label={game.title}
+                className={`slide-dot ${dotIndex === current ? "active" : ""}`}
+                onClick={() => setIndex(dotIndex)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Honours the OS "reduce motion" setting by holding the slideshow still. */
+function usePrefersReducedMotion(): boolean {
+  const query = useMemo(
+    () =>
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null,
+    [],
+  );
+
+  const [reduced, setReduced] = useState(() => query?.matches ?? false);
+
+  useEffect(() => {
+    if (!query) return;
+    const handleChange = () => setReduced(query.matches);
+    query.addEventListener("change", handleChange);
+    return () => query.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return reduced;
 }
