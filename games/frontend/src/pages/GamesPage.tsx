@@ -1,207 +1,328 @@
-import { useEffect, useState, useRef } from "react";
-import {
-  type Game,
-  type Platform,
-  api,
-  type CreateGamePayload,
-  type IgdbResult,
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ApiError, api } from "../api/client";
+import type {
+  Game,
+  GameListItem,
+  GameQueryParams,
+  Platform,
+  PlayStatus,
 } from "../api/client";
+import type { RouteParams } from "../hooks/useHashRoute";
+import { useToast } from "../hooks/toast";
+import GameCard from "../components/GameCard";
+import AddGameModal from "../components/AddGameModal";
+import GameDetailModal from "../components/GameDetailModal";
+import Modal from "../components/Modal";
+import { STATUSES, primaryEntry, statusLabel } from "../lib/game";
+import { existingEntryToPayload } from "../lib/entry";
+import { downloadCsv, gamesToCsv } from "../lib/export";
+
+const PAGE_SIZE = 60;
+const EXPORT_PAGE_SIZE = 200;
+const EXPORT_PAGE_LIMIT = 25;
+const SEARCH_DEBOUNCE_MS = 350;
+
+type SortOption = NonNullable<GameQueryParams["sort"]>;
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "title", label: "Title A–Z" },
+  { value: "-title", label: "Title Z–A" },
+  { value: "added", label: "Recently added" },
+  { value: "played", label: "Recently played" },
+  { value: "hours", label: "Most hours" },
+  { value: "rating", label: "Highest rated" },
+  { value: "year", label: "Newest release" },
+];
 
 interface Props {
-  filter: "all" | string;
+  /** The route's query string — the single source of truth for the filters. */
+  search: string;
   isLoggedIn: boolean;
   onLoginRequest: () => void;
+  onNavigate: (path: string, params?: RouteParams) => void;
 }
 
-const STATUSES = [
-  "Backlog",
-  "Playing",
-  "Completed",
-  "Dropped",
-  "OnHold",
-] as const;
-const MODES = ["Handheld", "TV", "CRT"] as const;
-const HARDWARE = ["Original", "Modded", "Emulator", "Cloud"] as const;
+interface Filters {
+  q: string;
+  status: PlayStatus | "";
+  platformId?: number;
+  favourite: boolean;
+  sort: SortOption;
+  gameId?: number;
+}
 
-// Shown when a guest tries to do something that requires login
-function PermissionDeniedModal({
-  onClose,
-  onLogin,
-}: {
-  onClose: () => void;
-  onLogin: () => void;
-}) {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: "380px" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <span className="modal-title">Access Restricted</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <div style={{ textAlign: "center", padding: "8px 0 20px" }}>
-            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔒</div>
-            <p
-              style={{
-                fontSize: "14px",
-                color: "var(--text-muted)",
-                marginBottom: "8px",
-              }}
-            >
-              Sorry, you don't have permission to do that.
-            </p>
-            <p
-              style={{
-                fontSize: "12px",
-                color: "var(--text-faint)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
-              This library belongs to Dimitri. Log in as admin to make changes.
-            </p>
-          </div>
-          <div className="btn-row" style={{ justifyContent: "center" }}>
-            <button className="btn btn-ghost" onClick={onClose}>
-              Close
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                onClose();
-                onLogin();
-              }}
-            >
-              Log In
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function parseFilters(search: string): Filters {
+  const params = new URLSearchParams(search);
+  const status = params.get("status") ?? "";
+  const sort = params.get("sort") ?? "title";
+  const gameId = Number(params.get("game"));
+
+  return {
+    q: params.get("q") ?? "",
+    status: STATUSES.includes(status as PlayStatus) ? (status as PlayStatus) : "",
+    platformId: Number(params.get("platform")) || undefined,
+    favourite: params.get("favourite") === "1",
+    sort: SORT_OPTIONS.some((option) => option.value === sort)
+      ? (sort as SortOption)
+      : "title",
+    gameId: Number.isInteger(gameId) && gameId > 0 ? gameId : undefined,
+  };
 }
 
 export default function GamesPage({
-  filter,
+  search,
   isLoggedIn,
   onLoginRequest,
+  onNavigate,
 }: Props) {
-  const [games, setGames] = useState<Game[]>([]);
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const { showToast } = useToast();
+  const filters = useMemo(() => parseFilters(search), [search]);
+
+  // The query key deliberately excludes `game`, so opening the detail dialog
+  // does not refetch the grid behind it.
+  const queryKey = useMemo(() => {
+    const params = new URLSearchParams(search);
+    params.delete("game");
+    return params.toString();
+  }, [search]);
+
+  const [games, setGames] = useState<GameListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setFilter] = useState(filter === "all" ? "All" : filter);
-  const [showAdd, setShowAdd] = useState(false);
-  const [selected, setSelected] = useState<Game | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Paging is stored with the query it belongs to, so a filter change resets
+  // to page 1 within the same render instead of firing a throwaway request.
+  const [paging, setPaging] = useState({ key: queryKey, page: 1 });
+  const page = paging.key === queryKey ? paging.page : 1;
+
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [editMode, setEditMode] = useState(false);
-  const [showPermDenied, setShowPermDenied] = useState(false);
-  const [toast, setToast] = useState<{
-    msg: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showPermissionDenied, setShowPermissionDenied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const searchInput = useRef<HTMLInputElement>(null);
+
+  const setFilter = useCallback(
+    (changes: Record<string, string | undefined>) => {
+      const params = new URLSearchParams(search);
+
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === undefined || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+
+      onNavigate("/library", Object.fromEntries(params));
+    },
+    [search, onNavigate],
+  );
+
+  // --- Data ---------------------------------------------------------------
 
   useEffect(() => {
-    Promise.all([api.getGames(), api.getPlatforms()])
-      .then(([g, p]) => {
-        setGames(g);
-        setPlatforms(p);
-      })
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+
+    api
+      .getPlatforms(controller.signal)
+      .then(setPlatforms)
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        // Not fatal: only the add/edit dropdowns need it.
+      });
+
+    return () => controller.abort();
   }, []);
 
-  const showToast = (msg: string, type: "success" | "error") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
 
-  // Gate any write action — show permission modal if not logged in
+    api
+      .getGames(
+        {
+          q: filters.q || undefined,
+          status: filters.status || undefined,
+          platformId: filters.platformId,
+          favourite: filters.favourite || undefined,
+          sort: filters.sort,
+          page,
+          pageSize: PAGE_SIZE,
+        },
+        controller.signal,
+      )
+      .then((result) => {
+        setGames((current) =>
+          result.page === 1 ? result.items : [...current, ...result.items],
+        );
+        setTotal(result.totalCount);
+        setHasMore(result.hasMore);
+        setLoading(false);
+      })
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        setLoading(false);
+        setError(
+          cause instanceof ApiError ? cause.message : "Could not load the library.",
+        );
+      });
+
+    return () => controller.abort();
+    // filters is derived from `search`; queryKey covers everything that
+    // changes the result set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryKey, page, reloadKey]);
+
+  // --- Keyboard -----------------------------------------------------------
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      event.preventDefault();
+      searchInput.current?.focus();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // --- Mutations ----------------------------------------------------------
+
+  const replaceGame = useCallback(
+    (updated: Game) => {
+      setGames((current) => {
+        // Un-favouriting while the favourites filter is on should drop it.
+        if (filters.favourite && !updated.isFavourite) {
+          return current.filter((game) => game.id !== updated.id);
+        }
+        return current.map((game) => (game.id === updated.id ? updated : game));
+      });
+    },
+    [filters.favourite],
+  );
+
+  const removeGame = useCallback((gameId: number) => {
+    setGames((current) => current.filter((game) => game.id !== gameId));
+    setTotal((current) => Math.max(current - 1, 0));
+  }, []);
+
   const requireAuth = (action: () => void) => {
     if (!isLoggedIn) {
-      setShowPermDenied(true);
+      setShowPermissionDenied(true);
       return;
     }
     action();
   };
 
-  const filtered =
-    activeFilter === "All"
-      ? games
-      : games.filter((g) =>
-          g.userEntries.some((e) => e.status === activeFilter),
-        );
-
-  const handleAdd = async (payload: CreateGamePayload) => {
-    try {
-      const game = await api.createGame(payload);
-      setGames((prev) => [...prev, game]);
-      setShowAdd(false);
-      showToast(`"${game.title}" added`, "success");
-    } catch {
-      showToast("Failed to add game", "error");
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await api.deleteGame(id);
-      setGames((prev) => prev.filter((g) => g.id !== id));
-      setSelected(null);
-      showToast("Game removed", "success");
-    } catch {
-      showToast("Failed to delete", "error");
-    }
-  };
-
-  const handleUpdateEntry = async (
-    gameId: number,
-    entryId: number,
-    data: any,
-  ) => {
-    try {
-      const updated = await api.updateEntry(gameId, entryId, data);
-      setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-      setSelected((prev) => (prev?.id === updated.id ? updated : prev));
-      showToast("Updated", "success");
-    } catch {
-      showToast("Update failed", "error");
-    }
-  };
-
-  const handleQuickStatus = async (game: Game, newStatus: string) => {
-    const entry = game.userEntries[0];
+  const handleQuickStatus = async (game: GameListItem, status: PlayStatus) => {
+    const entry = primaryEntry(game);
     if (!entry) return;
+
     try {
-      const updated = await api.updateEntry(game.id, entry.id, {
-        status: newStatus,
-      });
-      setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
-    } catch {
-      showToast("Update failed", "error");
+      replaceGame(
+        await api.updateEntry(
+          game.id,
+          entry.id,
+          existingEntryToPayload(entry, { status }),
+        ),
+      );
+    } catch (cause) {
+      showToast(
+        cause instanceof ApiError ? cause.message : "Update failed.",
+        "error",
+      );
     }
   };
 
-  if (loading) return <div className="loading">LOADING LIBRARY...</div>;
+  const handleToggleFavourite = async (game: GameListItem) => {
+    try {
+      replaceGame(await api.toggleFavourite(game.id));
+    } catch (cause) {
+      showToast(
+        cause instanceof ApiError ? cause.message : "Update failed.",
+        "error",
+      );
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const collected: GameListItem[] = [];
+
+      for (let current = 1; current <= EXPORT_PAGE_LIMIT; current++) {
+        const result = await api.getGames({
+          q: filters.q || undefined,
+          status: filters.status || undefined,
+          platformId: filters.platformId,
+          favourite: filters.favourite || undefined,
+          sort: filters.sort,
+          page: current,
+          pageSize: EXPORT_PAGE_SIZE,
+        });
+
+        collected.push(...result.items);
+        if (!result.hasMore) break;
+      }
+
+      downloadCsv(
+        `gamelog-${new Date().toISOString().slice(0, 10)}.csv`,
+        gamesToCsv(collected),
+      );
+      showToast(`Exported ${collected.length} games`, "success");
+    } catch (cause) {
+      showToast(
+        cause instanceof ApiError ? cause.message : "Export failed.",
+        "error",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // --- Render -------------------------------------------------------------
+
+  const selectedGame = filters.gameId
+    ? games.find((game) => game.id === filters.gameId)
+    : undefined;
+
+  const showingLabel = total === 1 ? "1 game" : `${total} games`;
 
   return (
     <>
       <div className="section">
         <div className="section-header">
-          <span className="section-title">Library</span>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            {/* Edit mode — only shown when logged in */}
+          <h2 className="section-title">Library</h2>
+
+          <div className="section-actions">
             {isLoggedIn && (
               <button
+                type="button"
                 className={`btn ${editMode ? "btn-primary" : "btn-ghost"}`}
-                onClick={() => setEditMode((e) => !e)}
+                aria-pressed={editMode}
+                onClick={() => setEditMode((current) => !current)}
               >
                 {editMode ? "✓ Done" : "✎ Edit Mode"}
               </button>
             )}
             <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleExport}
+              disabled={exporting || total === 0}
+            >
+              {exporting ? "Exporting…" : "↓ Export CSV"}
+            </button>
+            <button
+              type="button"
               className="btn btn-primary"
               onClick={() => requireAuth(() => setShowAdd(true))}
             >
@@ -211,840 +332,304 @@ export default function GamesPage({
         </div>
 
         {editMode && isLoggedIn && (
-          <div
-            style={{
-              background: "var(--blue-glow)",
-              border: "1px solid var(--blue-dim)",
-              borderRadius: "var(--radius-md)",
-              padding: "10px 14px",
-              marginBottom: "16px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--blue-bright)",
-              letterSpacing: "0.06em",
-            }}
-          >
-            EDIT MODE — Click a status badge on any card to change it instantly
-          </div>
+          <p className="notice notice-edit">
+            EDIT MODE — change a status straight from any card
+          </p>
         )}
 
-        {/* Guest notice */}
         {!isLoggedIn && (
-          <div
-            style={{
-              background: "rgba(0,122,204,0.05)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              padding: "10px 14px",
-              marginBottom: "16px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--text-faint)",
-              letterSpacing: "0.04em",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
+          <p className="notice">
             <span>👁 Viewing as guest — read only</span>
-            <button
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--blue)",
-                fontSize: "11px",
-                cursor: "pointer",
-                fontFamily: "var(--font-mono)",
-              }}
-              onClick={onLoginRequest}
-            >
+            <button type="button" className="link-btn" onClick={onLoginRequest}>
               Log in →
             </button>
-          </div>
+          </p>
         )}
 
-        <div className="filter-bar" style={{ marginBottom: "24px" }}>
-          {["All", ...STATUSES].map((s) => (
+        <SearchBar
+          value={filters.q}
+          inputRef={searchInput}
+          onChange={(value) => setFilter({ q: value || undefined })}
+        />
+
+        <div className="filter-bar" role="group" aria-label="Filter by status">
+          <button
+            type="button"
+            className={`filter-chip ${!filters.status && !filters.favourite ? "active" : ""}`}
+            aria-pressed={!filters.status && !filters.favourite}
+            onClick={() => setFilter({ status: undefined, favourite: undefined })}
+          >
+            All
+          </button>
+
+          {STATUSES.map((status) => (
             <button
-              key={s}
-              className={`filter-chip ${activeFilter === s ? "active" : ""}`}
-              onClick={() => setFilter(s)}
+              key={status}
+              type="button"
+              className={`filter-chip ${filters.status === status ? "active" : ""}`}
+              aria-pressed={filters.status === status}
+              onClick={() =>
+                setFilter({
+                  status: filters.status === status ? undefined : status,
+                  favourite: undefined,
+                })
+              }
             >
-              {s}
+              {statusLabel(status)}
             </button>
           ))}
+
+          <button
+            type="button"
+            className={`filter-chip ${filters.favourite ? "active" : ""}`}
+            aria-pressed={filters.favourite}
+            onClick={() =>
+              setFilter({
+                favourite: filters.favourite ? undefined : "1",
+                status: undefined,
+              })
+            }
+          >
+            ★ Favourites
+          </button>
         </div>
 
-        {filtered.length === 0 ? (
+        <div className="list-toolbar">
+          <div className="list-toolbar-controls">
+            <label className="visually-hidden" htmlFor="platform-filter">
+              Filter by platform
+            </label>
+            <select
+              id="platform-filter"
+              className="form-select form-select-inline"
+              value={filters.platformId ?? ""}
+              onChange={(event) =>
+                setFilter({ platform: event.target.value || undefined })
+              }
+            >
+              <option value="">All platforms</option>
+              {platforms.map((platform) => (
+                <option key={platform.id} value={platform.id}>
+                  {platform.name}
+                </option>
+              ))}
+            </select>
+
+            <label className="visually-hidden" htmlFor="sort-order">
+              Sort order
+            </label>
+            <select
+              id="sort-order"
+              className="form-select form-select-inline"
+              value={filters.sort}
+              onChange={(event) => setFilter({ sort: event.target.value })}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <span className="list-count" aria-live="polite">
+            {loading && games.length === 0 ? "Loading…" : showingLabel}
+          </span>
+        </div>
+
+        {error ? (
+          <div className="empty-state">
+            <p>{error}</p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setReloadKey((key) => key + 1)}
+            >
+              Try again
+            </button>
+          </div>
+        ) : loading && games.length === 0 ? (
+          <div className="games-grid" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, index) => (
+              <div className="game-card skeleton" key={index} />
+            ))}
+          </div>
+        ) : games.length === 0 ? (
           <div className="empty-state">
             <p>NO GAMES FOUND</p>
-            {isLoggedIn && (
+            {(filters.q || filters.status || filters.platformId || filters.favourite) && (
               <button
-                className="btn btn-primary"
-                onClick={() => setShowAdd(true)}
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => onNavigate("/library")}
               >
-                + Add Game
+                Clear filters
               </button>
             )}
           </div>
         ) : (
-          <div className="games-grid">
-            {filtered.map((g) => (
-              <GameCard
-                key={g.id}
-                game={g}
-                editMode={editMode && isLoggedIn}
-                onClick={() => setSelected(g)}
-                onQuickStatus={handleQuickStatus}
-              />
-            ))}
-          </div>
+          <>
+            <div className={`games-grid${loading ? " is-loading" : ""}`}>
+              {games.map((game, index) => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  editMode={editMode && isLoggedIn}
+                  canFavourite={isLoggedIn}
+                  eagerCover={index < 6}
+                  onOpen={() => setFilter({ game: String(game.id) })}
+                  onQuickStatus={handleQuickStatus}
+                  onToggleFavourite={handleToggleFavourite}
+                />
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="load-more">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={loading}
+                  onClick={() =>
+                    setPaging({ key: queryKey, page: page + 1 })
+                  }
+                >
+                  {loading ? "Loading…" : `Load more (${games.length} of ${total})`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {showAdd && isLoggedIn && (
         <AddGameModal
           platforms={platforms}
-          onAdd={handleAdd}
           onClose={() => setShowAdd(false)}
-        />
-      )}
-
-      {selected && (
-        <GameDetailModal
-          game={selected}
-          isLoggedIn={isLoggedIn}
-          onClose={() => setSelected(null)}
-          onDelete={(id) => requireAuth(() => handleDelete(id))}
-          onUpdateEntry={(gId, eId, data) =>
-            requireAuth(() => handleUpdateEntry(gId, eId, data))
-          }
-          onLoginRequest={() => {
-            setSelected(null);
-            setShowPermDenied(true);
+          onCreated={(game) => {
+            setShowAdd(false);
+            setReloadKey((key) => key + 1);
+            showToast(`"${game.title}" added`, "success");
+          }}
+          onOpenExisting={(gameId) => {
+            setShowAdd(false);
+            setFilter({ game: String(gameId) });
           }}
         />
       )}
 
-      {showPermDenied && (
-        <PermissionDeniedModal
-          onClose={() => setShowPermDenied(false)}
-          onLogin={onLoginRequest}
+      {filters.gameId && (
+        <GameDetailModal
+          gameId={filters.gameId}
+          initial={selectedGame}
+          platforms={platforms}
+          isLoggedIn={isLoggedIn}
+          onClose={() => setFilter({ game: undefined })}
+          onChanged={replaceGame}
+          onDeleted={(gameId) => {
+            removeGame(gameId);
+            showToast("Game removed", "success");
+          }}
+          onLoginRequest={() => {
+            setFilter({ game: undefined });
+            onLoginRequest();
+          }}
         />
       )}
 
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+      {showPermissionDenied && (
+        <Modal
+          title="Access Restricted"
+          maxWidth="380px"
+          onClose={() => setShowPermissionDenied(false)}
+        >
+          <div className="locked-state">
+            <div className="locked-icon" aria-hidden="true">
+              🔒
+            </div>
+            <p>Sorry, you don't have permission to do that.</p>
+            <p className="locked-note">
+              This library belongs to Dimitri. Log in as admin to make changes.
+            </p>
+          </div>
+          <div className="btn-row btn-row-center">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setShowPermissionDenied(false)}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setShowPermissionDenied(false);
+                onLoginRequest();
+              }}
+            >
+              Log In
+            </button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
 
-function GameCard({
-  game,
-  editMode,
-  onClick,
-  onQuickStatus,
+function SearchBar({
+  value,
+  inputRef,
+  onChange,
 }: {
-  game: Game;
-  editMode: boolean;
-  onClick: () => void;
-  onQuickStatus: (game: Game, status: string) => void;
+  value: string;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (value: string) => void;
 }) {
-  const entry = game.userEntries[0];
+  const [text, setText] = useState(value);
+  const [syncedValue, setSyncedValue] = useState(value);
+
+  // Adjusting state during render is React's own answer to "reset when a prop
+  // changes": it keeps the box in step with the URL after a back button or a
+  // "clear filters" click, with no extra pass over the DOM.
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setText(value);
+  }
+
+  // Debounced: typing does not push a URL entry or a request per keystroke.
+  useEffect(() => {
+    if (text === value) return;
+
+    const timer = setTimeout(() => onChange(text), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [text, value, onChange]);
+
   return (
-    <div className="game-card" onClick={onClick}>
-      {game.coverUrl ? (
-        <img src={game.coverUrl} className="game-card-cover" alt={game.title} />
-      ) : (
-        <div className="game-card-cover-placeholder">🎮</div>
+    <div className="search-bar">
+      <label className="visually-hidden" htmlFor="library-search">
+        Search the library
+      </label>
+      <input
+        id="library-search"
+        ref={inputRef}
+        className="form-input"
+        type="search"
+        placeholder="Search titles and developers…  (press / )"
+        value={text}
+        autoComplete="off"
+        onChange={(event) => setText(event.target.value)}
+      />
+      {text && (
+        <button
+          type="button"
+          className="search-clear"
+          aria-label="Clear search"
+          onClick={() => setText("")}
+        >
+          ✕
+        </button>
       )}
-      <div className="game-card-body">
-        <div className="game-card-title">{game.title}</div>
-        {entry && (
-          <div className="game-card-meta">
-            {editMode ? (
-              <select
-                className="quick-status-select"
-                value={entry.status}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onQuickStatus(game, e.target.value);
-                }}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className={`status-badge status-${entry.status}`}>
-                {entry.status}
-              </span>
-            )}
-            {entry.hoursPlayed ? (
-              <span className="game-card-hours">{entry.hoursPlayed}h</span>
-            ) : null}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AddGameModal({
-  platforms,
-  onAdd,
-  onClose,
-}: {
-  platforms: Platform[];
-  onAdd: (p: CreateGamePayload) => void;
-  onClose: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<IgdbResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState<IgdbResult | null>(null);
-  const [platformId, setPlatform] = useState(platforms[0]?.id ?? 1);
-  const [status, setStatus] = useState("Backlog");
-  const [mode, setMode] = useState("");
-  const [hardware, setHardware] = useState("Original");
-  const [hours, setHours] = useState("");
-  const [rating, setRating] = useState("");
-  const [notes, setNotes] = useState("");
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleSearch = (q: string) => {
-    setQuery(q);
-    setSelected(null);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (q.length < 2) {
-      setResults([]);
-      return;
-    }
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        setResults(await api.search(q));
-      } finally {
-        setSearching(false);
-      }
-    }, 400);
-  };
-
-  const handleSelect = (r: IgdbResult) => {
-    setSelected(r);
-    setQuery(r.name);
-    setResults([]);
-  };
-
-  const handleSubmit = () => {
-    const title = selected?.name ?? query.trim();
-    if (!title) return;
-    onAdd({
-      title,
-      coverUrl: selected?.coverUrl ?? undefined,
-      genre: selected?.genres[0] ?? undefined,
-      releaseYear: selected?.releaseYear ?? undefined,
-      developer: selected?.developers[0] ?? undefined,
-      summary: selected?.summary ?? undefined,
-      igdbId: selected?.id ?? undefined,
-      entry: {
-        platformId,
-        status,
-        mode: mode || undefined,
-        hardware,
-        hoursPlayed: hours ? parseFloat(hours) : undefined,
-        rating: rating ? parseInt(rating) : undefined,
-        notes: notes || undefined,
-      },
-    });
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">Add Game</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="form-group">
-            <label className="form-label">Search IGDB</label>
-            <input
-              className="form-input"
-              placeholder="Start typing a game name..."
-              value={query}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            {searching && (
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "var(--text-faint)",
-                  padding: "6px 0",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                SEARCHING...
-              </div>
-            )}
-            {results.length > 0 && (
-              <div className="search-results">
-                {results.map((r) => (
-                  <div
-                    key={r.id}
-                    className="search-result-item"
-                    onClick={() => handleSelect(r)}
-                  >
-                    {r.coverUrl ? (
-                      <img
-                        src={r.coverUrl}
-                        className="search-result-cover"
-                        alt={r.name}
-                      />
-                    ) : (
-                      <div className="search-result-cover" />
-                    )}
-                    <div className="search-result-info">
-                      <div className="search-result-name">{r.name}</div>
-                      <div className="search-result-meta">
-                        {r.releaseYear && <span>{r.releaseYear}</span>}
-                        {r.developers[0] && <span> · {r.developers[0]}</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selected && (
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                marginBottom: "16px",
-                padding: "12px",
-                background: "var(--surface)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border-2)",
-              }}
-            >
-              {selected.coverUrl && (
-                <img
-                  src={selected.coverUrl}
-                  style={{
-                    width: "48px",
-                    height: "64px",
-                    objectFit: "cover",
-                    borderRadius: "3px",
-                  }}
-                  alt={selected.name}
-                />
-              )}
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: "4px" }}>
-                  {selected.name}
-                </div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {selected.releaseYear} · {selected.genres.join(", ")}
-                </div>
-                <div
-                  style={{
-                    fontSize: "11px",
-                    color: "var(--blue)",
-                    marginTop: "2px",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  ✓ IGDB data loaded
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
-            <div className="form-group">
-              <label className="form-label">Platform</label>
-              <select
-                className="form-select"
-                value={platformId}
-                onChange={(e) => setPlatform(Number(e.target.value))}
-              >
-                {platforms.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
-            <div className="form-group">
-              <label className="form-label">Play Mode</label>
-              <select
-                className="form-select"
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-              >
-                <option value="">— Not specified</option>
-                {MODES.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hardware</label>
-              <select
-                className="form-select"
-                value={hardware}
-                onChange={(e) => setHardware(e.target.value)}
-              >
-                {HARDWARE.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
-            <div className="form-group">
-              <label className="form-label">Hours Played</label>
-              <input
-                className="form-input"
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="0"
-                value={hours}
-                onChange={(e) => setHours(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Rating (1–10)</label>
-              <input
-                className="form-input"
-                type="number"
-                min="1"
-                max="10"
-                placeholder="—"
-                value={rating}
-                onChange={(e) => setRating(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Notes</label>
-            <textarea
-              className="form-textarea"
-              placeholder="Your thoughts..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="btn-row">
-            <button className="btn btn-ghost" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={!query.trim() && !selected}
-            >
-              Add Game
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GameDetailModal({
-  game,
-  isLoggedIn,
-  onClose,
-  onDelete,
-  onUpdateEntry,
-  onLoginRequest,
-}: {
-  game: Game;
-  isLoggedIn: boolean;
-  onClose: () => void;
-  onDelete: (id: number) => void;
-  onUpdateEntry: (gameId: number, entryId: number, data: any) => void;
-  onLoginRequest: () => void;
-}) {
-  const entry = game.userEntries[0];
-  const [editing, setEditing] = useState(false);
-  const [status, setStatus] = useState(entry?.status ?? "Backlog");
-  const [mode, setMode] = useState<string>(entry?.mode ?? "");
-  const [hardware, setHardware] = useState<string>(
-    entry?.hardware ?? "Original",
-  );
-  const [hours, setHours] = useState(String(entry?.hoursPlayed ?? ""));
-  const [rating, setRating] = useState(String(entry?.rating ?? ""));
-  const [notes, setNotes] = useState(entry?.notes ?? "");
-
-  const handleSave = () => {
-    if (!entry) return;
-    onUpdateEntry(game.id, entry.id, {
-      status,
-      mode: mode || undefined,
-      hardware,
-      hoursPlayed: hours ? parseFloat(hours) : undefined,
-      rating: rating ? parseInt(rating) : undefined,
-      notes: notes || undefined,
-    });
-    setEditing(false);
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">{game.title}</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <div className="modal-body">
-          <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
-            {game.coverUrl && (
-              <img
-                src={game.coverUrl}
-                style={{
-                  width: "80px",
-                  height: "106px",
-                  objectFit: "cover",
-                  borderRadius: "4px",
-                  flexShrink: 0,
-                }}
-                alt={game.title}
-              />
-            )}
-            <div>
-              {game.developer && (
-                <div
-                  style={{
-                    fontSize: "13px",
-                    color: "var(--text-muted)",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {game.developer}
-                </div>
-              )}
-              {game.releaseYear && (
-                <div
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "12px",
-                    color: "var(--text-faint)",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {game.releaseYear}
-                </div>
-              )}
-              {game.genre && (
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--text-faint)",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {game.genre}
-                </div>
-              )}
-              {entry && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                  }}
-                >
-                  <span className={`status-badge status-${entry.status}`}>
-                    {entry.status}
-                  </span>
-                  {entry.hoursPlayed && (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "11px",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {entry.hoursPlayed}h
-                    </span>
-                  )}
-                  {entry.rating && (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "11px",
-                        color: "var(--blue-bright)",
-                      }}
-                    >
-                      ★ {entry.rating}/10
-                    </span>
-                  )}
-                  {entry.mode && (
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "10px",
-                        color: "var(--text-faint)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {entry.mode}
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "10px",
-                      color:
-                        entry.hardware === "Modded"
-                          ? "var(--orange)"
-                          : "var(--text-faint)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {entry.hardware}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "10px",
-                      color: "var(--text-faint)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {entry.source}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {game.summary && (
-            <p
-              style={{
-                fontSize: "13px",
-                color: "var(--text-muted)",
-                marginBottom: "20px",
-                lineHeight: "1.6",
-              }}
-            >
-              {game.summary}
-            </p>
-          )}
-
-          {entry && editing && isLoggedIn ? (
-            <>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px",
-                }}
-              >
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Hours</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={hours}
-                    onChange={(e) => setHours(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px",
-                }}
-              >
-                <div className="form-group">
-                  <label className="form-label">Play Mode</label>
-                  <select
-                    className="form-select"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value)}
-                  >
-                    <option value="">— Not specified</option>
-                    {MODES.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Hardware</label>
-                  <select
-                    className="form-select"
-                    value={hardware}
-                    onChange={(e) => setHardware(e.target.value)}
-                  >
-                    {HARDWARE.map((h) => (
-                      <option key={h} value={h}>
-                        {h}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Rating (1–10)</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={rating}
-                  onChange={(e) => setRating(e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notes</label>
-                <textarea
-                  className="form-textarea"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-              <div className="btn-row">
-                <button
-                  className="btn btn-ghost"
-                  onClick={() => setEditing(false)}
-                >
-                  Cancel
-                </button>
-                <button className="btn btn-primary" onClick={handleSave}>
-                  Save
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {entry?.notes && (
-                <div
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "12px 14px",
-                    marginBottom: "16px",
-                    fontSize: "13px",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  {entry.notes}
-                </div>
-              )}
-              {entry?.achievementsEarned != null &&
-                entry.achievementsTotal != null && (
-                  <div
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "12px",
-                      color: "var(--text-muted)",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    ACHIEVEMENTS: {entry.achievementsEarned} /{" "}
-                    {entry.achievementsTotal}
-                  </div>
-                )}
-              <div className="btn-row">
-                {isLoggedIn ? (
-                  <>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => onDelete(game.id)}
-                    >
-                      Delete
-                    </button>
-                    <button
-                      className="btn btn-ghost"
-                      onClick={() => setEditing(true)}
-                    >
-                      Edit Entry
-                    </button>
-                  </>
-                ) : (
-                  <button className="btn btn-ghost" onClick={onLoginRequest}>
-                    🔒 Log in to edit
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

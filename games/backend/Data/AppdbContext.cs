@@ -15,6 +15,21 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // --- Indexes ---
+        // Every list query orders by title or created date and filters on
+        // status; the Steam sync looks games up by SteamAppId. Without these
+        // each one is a sequential scan of the whole table.
+        modelBuilder.Entity<Game>(game =>
+        {
+            game.HasIndex(g => g.Title);
+            game.HasIndex(g => g.CreatedAt);
+            game.HasIndex(g => g.SteamAppId);
+            game.HasIndex(g => g.IgdbId);
+        });
+
+        modelBuilder.Entity<UserEntry>()
+            .HasIndex(e => e.Status);
+
         modelBuilder.Entity<UserEntry>()
             .HasOne(e => e.Game)
             .WithMany(g => g.UserEntries)

@@ -63,6 +63,14 @@ namespace MittsModsApi.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IgdbId");
+
+                    b.HasIndex("SteamAppId");
+
+                    b.HasIndex("Title");
+
                     b.ToTable("Games");
                 });
 
@@ -311,6 +319,8 @@ namespace MittsModsApi.Migrations
                     b.HasIndex("GameId");
 
                     b.HasIndex("PlatformId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("UserEntries");
                 });
