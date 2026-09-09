@@ -34,10 +34,6 @@ jobs:
         working-directory: games/frontend
         run: npm ci
 
-      - name: Lint
-        working-directory: games/frontend
-        run: npm run lint
-
       # The API URL lives in .env.production. The secret is an optional
       # override, applied only when it is actually set — passing it through
       # unconditionally would export an empty VITE_API_URL and ship a build

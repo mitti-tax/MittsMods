@@ -94,9 +94,14 @@ export default function Dashboard({ onNavigate }: Props) {
 
   const { stats, recentlyPlayed, playing, recentlyAdded } = data;
 
+  // The hero only earns its 420px when it has something to show. A library
+  // with games but nothing played yet skips it rather than claiming
+  // "no games logged" above a stats bar that says otherwise.
+  const showHero = recentlyPlayed.length > 0 || stats.totalGames === 0;
+
   return (
     <>
-      <Slideshow games={recentlyPlayed} onOpen={openGame} />
+      {showHero && <Slideshow games={recentlyPlayed} onOpen={openGame} />}
 
       <div className="stats-bar">
         <Stat value={stats.totalGames} label="Total Games" />

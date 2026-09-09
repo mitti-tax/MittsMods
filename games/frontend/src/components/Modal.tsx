@@ -41,6 +41,15 @@ export default function Modal({
   const pressedOnOverlay = useRef(false);
   const titleId = useId();
 
+  // Held in a ref so the setup effect can stay mount-only. Callers pass an
+  // inline arrow, and keying the effect on it would re-run the whole
+  // setup/teardown on every parent render — including the focus restore,
+  // which would yank focus out of the dialog mid-edit.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     const id = Symbol("dialog");
     openDialogs.push(id);
@@ -59,7 +68,7 @@ export default function Modal({
       if (event.key !== "Escape") return;
       if (openDialogs[openDialogs.length - 1] !== id) return;
       event.stopPropagation();
-      onClose();
+      onCloseRef.current();
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -75,7 +84,7 @@ export default function Modal({
 
       previouslyFocused?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   const handleTrapFocus = useCallback((event: React.KeyboardEvent) => {
     if (event.key !== "Tab") return;
