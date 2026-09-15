@@ -5,6 +5,8 @@ import {
   api,
   type CreateGamePayload,
   type IgdbResult,
+  type PlayStatus,
+  type UpdateEntryPayload,
 } from "../api/client";
 
 interface Props {
@@ -159,7 +161,7 @@ export default function GamesPage({
   const handleUpdateEntry = async (
     gameId: number,
     entryId: number,
-    data: any,
+    data: UpdateEntryPayload,
   ) => {
     try {
       const updated = await api.updateEntry(gameId, entryId, data);
@@ -714,7 +716,7 @@ function GameDetailModal({
   isLoggedIn: boolean;
   onClose: () => void;
   onDelete: (id: number) => void;
-  onUpdateEntry: (gameId: number, entryId: number, data: any) => void;
+  onUpdateEntry: (gameId: number, entryId: number, data: UpdateEntryPayload) => void;
   onLoginRequest: () => void;
 }) {
   const entry = game.userEntries[0];
@@ -901,7 +903,7 @@ function GameDetailModal({
                   <select
                     className="form-select"
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={(e) => setStatus(e.target.value as PlayStatus)}
                   >
                     {STATUSES.map((s) => (
                       <option key={s}>{s}</option>
