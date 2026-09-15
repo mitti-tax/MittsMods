@@ -8,15 +8,15 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function useAuth() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [checking, setChecking] = useState(true);
+  // Only start "checking" if there's a stored token to verify.
+  const [checking, setChecking] = useState(
+    () => !!localStorage.getItem(TOKEN_KEY),
+  );
 
   // On mount, verify any stored token is still valid
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setChecking(false);
-      return;
-    }
+    if (!token) return;
 
     fetch(`${BASE_URL}/api/auth/verify`, {
       method: "POST",
