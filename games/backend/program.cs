@@ -27,8 +27,7 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "https://mitti-tax.github.io",
-                "https://mitti-tax.github.io/MittsMods/games/"
+                "https://mitti-tax.github.io"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
