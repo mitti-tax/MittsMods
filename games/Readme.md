@@ -13,7 +13,7 @@ A personal game tracking and logging application. Tracks every game played acros
 | -------- | --------------------------------------------------- |
 | Frontend | React + TypeScript (Vite), deployed to GitHub Pages |
 | Backend  | C# ASP.NET Core 10 Web API, deployed to Railway     |
-| Database | PostgreSQL via Entity Framework Core                |
+| Database | SQLite via Entity Framework Core                    |
 | APIs     | Steam Web API, IGDB via Twitch OAuth                |
 | CI/CD    | GitHub Actions — auto deploys on push to `main`     |
 
@@ -59,16 +59,22 @@ games/
 
 - .NET 10 SDK
 - Node.js 18+
-- PostgreSQL (local instance)
+
+No database install needed — SQLite is a file, created automatically on first run.
 
 ### Backend
 
 ```bash
 cd games/backend
 dotnet restore
-dotnet ef migrations add InitialCreate
-dotnet ef database update
 dotnet run
+```
+
+Migrations apply automatically on startup (`db.Database.Migrate()` in `program.cs`). To add a new migration after changing a model:
+
+```bash
+dotnet tool restore
+dotnet tool run dotnet-ef migrations add YourMigrationName
 ```
 
 Create `appsettings.Development.json` with:
@@ -76,7 +82,7 @@ Create `appsettings.Development.json` with:
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=mittsmods;Username=postgres;Password=yourpassword"
+    "DefaultConnection": "Data Source=mittsmods.db"
   },
   "Twitch": {
     "ClientId": "your_twitch_client_id",
@@ -114,15 +120,17 @@ Frontend runs at: `http://localhost:5173`
 Railway environment variables required:
 
 ```
-DATABASE_URL        (injected automatically from Railway Postgres)
 ASPNETCORE_ENVIRONMENT = Production
 ASPNETCORE_URLS        = http://+:$PORT
+ConnectionStrings__DefaultConnection = Data Source=/data/mittsmods.db
 Twitch__ClientId
 Twitch__ClientSecret
 Steam__ApiKey
 Steam__SteamId
 ADMIN_PASSWORD
 ```
+
+> **A Railway Volume must be attached and mounted at `/data`.** Railway's container filesystem is ephemeral and resets on every deploy — without a volume, the SQLite file (and everything in it) is wiped every time the service redeploys.
 
 ---
 

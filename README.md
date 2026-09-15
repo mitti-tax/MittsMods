@@ -20,7 +20,7 @@ A full-stack web application for tracking and logging a personal game library, b
 |----------|---------------------------------------------|
 | Frontend | React + TypeScript (Vite), GitHub Pages     |
 | Backend  | C# ASP.NET Core 10 Web API, Railway         |
-| Database | PostgreSQL via Entity Framework Core        |
+| Database | SQLite via Entity Framework Core            |
 | APIs     | Steam Web API, IGDB (Twitch OAuth)          |
 
 ---
