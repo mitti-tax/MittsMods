@@ -112,6 +112,9 @@ export default function GamesPage({
         setGames(g);
         setPlatforms(p);
       })
+      .catch(() =>
+        setToast({ msg: "Couldn't load the library — is the API up?", type: "error" }),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -148,6 +151,8 @@ export default function GamesPage({
   };
 
   const handleDelete = async (id: number) => {
+    const title = games.find((g) => g.id === id)?.title ?? "this game";
+    if (!confirm(`Delete "${title}"? This can't be undone.`)) return;
     try {
       await api.deleteGame(id);
       setGames((prev) => prev.filter((g) => g.id !== id));
@@ -428,6 +433,8 @@ function AddGameModal({
       setSearching(true);
       try {
         setResults(await api.search(q));
+      } catch {
+        setResults([]); // search is a convenience; manual title entry still works
       } finally {
         setSearching(false);
       }
@@ -738,7 +745,8 @@ function GameDetailModal({
       hardware,
       hoursPlayed: hours ? parseFloat(hours) : undefined,
       rating: rating ? parseInt(rating) : undefined,
-      notes: notes || undefined,
+      // Send "" (not undefined) so clearing the notes box actually clears them
+      notes,
     });
     setEditing(false);
   };
@@ -814,7 +822,7 @@ function GameDetailModal({
                   <span className={`status-badge status-${entry.status}`}>
                     {entry.status}
                   </span>
-                  {entry.hoursPlayed && (
+                  {!!entry.hoursPlayed && (
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",
@@ -825,7 +833,7 @@ function GameDetailModal({
                       {entry.hoursPlayed}h
                     </span>
                   )}
-                  {entry.rating && (
+                  {!!entry.rating && (
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",

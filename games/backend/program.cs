@@ -13,7 +13,7 @@ builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<SteamService>();
 
 // --- Connection string ---
-// Railway provides DATABASE_URL as a postgres:// URI
+// DATABASE_URL may be a postgres:// URI (hosted Postgres) or key=value (docker-compose)
 // Npgsql needs it converted to key=value format
 var rawUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");

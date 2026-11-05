@@ -2,8 +2,8 @@
 
 A personal game tracking and logging application. Tracks every game played across my personal Steam Library, and includes sync, IGDB metadata, achievements, ratings, and personal notes.
 
-**Live:** [mitti-tax.github.io/MittsMods/games](https://mitti-tax.github.io/MittsMods/games)  
-**API:** [mittsmods-production.up.railway.app](https://mittsmods-production.up.railway.app)
+**Live:** [mittsmods.com/games](https://mittsmods.com/games)  
+**API:** [api.mittsmods.com](https://api.mittsmods.com)
 
 ---
 
@@ -12,10 +12,10 @@ A personal game tracking and logging application. Tracks every game played acros
 | Layer    | Tech                                                |
 | -------- | --------------------------------------------------- |
 | Frontend | React + TypeScript (Vite), deployed to GitHub Pages |
-| Backend  | C# ASP.NET Core 10 Web API, deployed to Railway     |
+| Backend  | C# ASP.NET Core 10 Web API, self-hosted in Docker   |
 | Database | PostgreSQL via Entity Framework Core                |
 | APIs     | Steam Web API, IGDB via Twitch OAuth                |
-| CI/CD    | GitHub Actions — auto deploys on push to `main`     |
+| Hosting  | Docker Compose + Cloudflare Tunnel; Pages for the UI |
 
 ---
 
@@ -66,8 +66,7 @@ games/
 ```bash
 cd games/backend
 dotnet restore
-dotnet ef migrations add InitialCreate
-dotnet ef database update
+dotnet ef database update   # also runs automatically on startup
 dotnet run
 ```
 
@@ -106,22 +105,18 @@ Frontend runs at: `http://localhost:5173`
 
 ## Deployment
 
-| Service  | Platform     | Trigger                                       |
-| -------- | ------------ | --------------------------------------------- |
-| Frontend | GitHub Pages | Push to `main` (changes in `games/frontend/`) |
-| Backend  | Railway      | Push to `main` (changes in `games/backend/`)  |
+| Service  | Platform                         | Trigger                                       |
+| -------- | -------------------------------- | --------------------------------------------- |
+| Frontend | GitHub Pages (`mittsmods.com`)   | Push to `main` (changes in `games/frontend/`) |
+| Backend  | Docker Compose on a home server  | Manual: `docker compose up -d --build`        |
 
-Railway environment variables required:
+The API, Postgres and `cloudflared` run from [`docker-compose.yml`](docker-compose.yml). Nothing is
+exposed to the network; `api.mittsmods.com` reaches the API through the Cloudflare tunnel.
 
-```
-DATABASE_URL        (injected automatically from Railway Postgres)
-ASPNETCORE_ENVIRONMENT = Production
-ASPNETCORE_URLS        = http://+:$PORT
-Twitch__ClientId
-Twitch__ClientSecret
-Steam__ApiKey
-Steam__SteamId
-ADMIN_PASSWORD
+```bash
+cp .env.example .env && chmod 600 .env   # fill in secrets
+docker compose up -d --build
+ADMIN_PASSWORD='...' ./check-auth.sh      # confirms unauthenticated writes are rejected
 ```
 
 ---
@@ -134,4 +129,4 @@ ADMIN_PASSWORD
 - [x] M4 — Steam integration (library sync, achievements)
 - [x] M5 — React frontend (dashboard, game library, add/edit/delete)
 - [x] M6 — Dashboard stats, recently played slideshow
-- [x] M7 — PostgreSQL migration, Railway deployment, GitHub Actions CI/CD, auth, mobile UI
+- [x] M7 — PostgreSQL migration, Railway deployment (since moved to self-hosted Docker), GitHub Actions CI/CD, auth, mobile UI

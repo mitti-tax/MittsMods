@@ -14,12 +14,14 @@ public class SteamController : ControllerBase
     private readonly SteamService _steam;
     private readonly AppDbContext _db;
     private readonly IgdbService _igdb;
+    private readonly ILogger<SteamController> _logger;
 
-    public SteamController(SteamService steam, AppDbContext db, IgdbService igdb)
+    public SteamController(SteamService steam, AppDbContext db, IgdbService igdb, ILogger<SteamController> logger)
     {
         _steam = steam;
         _db = db;
         _igdb = igdb;
+        _logger = logger;
     }
 
     // -------------------------------------------------------
@@ -52,14 +54,17 @@ public class SteamController : ControllerBase
 
         var result = new SteamSyncResult();
 
+        // One query for every already-tracked Steam game instead of one per library entry
+        var existingByAppId = (await _db.Games
+                .Include(g => g.UserEntries)
+                .Where(g => g.SteamAppId != null)
+                .ToListAsync())
+            .DistinctBy(g => g.SteamAppId)
+            .ToDictionary(g => g.SteamAppId!.Value);
+
         foreach (var steamGame in library)
         {
-            // Check if we already have this Steam game
-            var existing = await _db.Games
-                .Include(g => g.UserEntries)
-                .FirstOrDefaultAsync(g => g.SteamAppId == steamGame.SteamAppId);
-
-            if (existing != null)
+            if (existingByAppId.TryGetValue(steamGame.SteamAppId, out var existing))
             {
                 // Update hours on the existing Steam entry
                 var entry = existing.UserEntries.FirstOrDefault(e => e.Source == EntrySource.Steam);
@@ -79,10 +84,15 @@ public class SteamController : ControllerBase
             // Fetch achievements and IGDB metadata in parallel
             var achievementsTask = _steam.GetAchievementsAsync(steamGame.SteamAppId);
             var igdbTask = _igdb.SearchAsync(steamGame.Name);
-            await Task.WhenAll(achievementsTask, igdbTask);
+            var achievements = await achievementsTask;
 
-            var achievements = achievementsTask.Result;
-            var igdbMatch = igdbTask.Result.FirstOrDefault();
+            // IGDB is optional metadata — a failure (e.g. rate limit) must not abort the whole sync
+            IgdbGameResult? igdbMatch = null;
+            try { igdbMatch = (await igdbTask).FirstOrDefault(); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("IGDB lookup failed for {Name}: {Message}", steamGame.Name, ex.Message);
+            }
 
             // Determine status based on hours played
             var status = steamGame.HoursPlayed == 0

@@ -11,6 +11,7 @@ type Page = "dashboard" | "games" | "backlog";
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
   const [syncing, setSyncing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [toast, setToast] = useState<{
@@ -37,10 +38,8 @@ function App() {
         `Synced — ${result.added} added, ${result.updated} updated`,
         "success",
       );
-      setPage((p) => {
-        setTimeout(() => setPage(p), 0);
-        return "dashboard";
-      });
+      // Remount the current page so it refetches the library
+      setRefreshKey((k) => k + 1);
     } catch {
       showToast("Steam sync failed", "error");
     } finally {
@@ -164,7 +163,7 @@ function App() {
       </aside>
 
       {/* Main content */}
-      <main className="main">
+      <main className="main" key={refreshKey}>
         {page === "dashboard" && (
           <Dashboard onNavigate={navigate} isLoggedIn={isLoggedIn} />
         )}

@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 
 export const TOKEN_KEY = "mittsmods_admin_token";
+export const AUTH_EXPIRED_EVENT = "mittsmods-auth-expired";
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function useAuth() {
@@ -32,6 +33,13 @@ export function useAuth() {
         localStorage.removeItem(TOKEN_KEY);
       })
       .finally(() => setChecking(false));
+  }, []);
+
+  // The API client fires this when a write comes back 401 (token expired mid-session)
+  useEffect(() => {
+    const onExpired = () => setIsLoggedIn(false);
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
   }, []);
 
   const login = async (

@@ -1,4 +1,4 @@
-import { TOKEN_KEY } from "../hooks/useAuth";
+import { AUTH_EXPIRED_EVENT, TOKEN_KEY } from "../hooks/useAuth";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -106,6 +106,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+  if (res.status === 401 && token) {
+    // Token expired or was invalidated — drop it so the UI falls back to guest mode
+    localStorage.removeItem(TOKEN_KEY);
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return undefined as T;
   return res.json();

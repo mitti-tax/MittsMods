@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MittsModsApi.DTOs;
 
 public class GameDto
@@ -53,7 +55,9 @@ public class CreateUserEntryDto
 {
     public required int PlatformId { get; set; }
     public string Status { get; set; } = "Backlog";
+    [Range(0, 100000)]
     public decimal? HoursPlayed { get; set; }
+    [Range(1, 10)]
     public int? Rating { get; set; }
     public string? Notes { get; set; }
     public int? AchievementsEarned { get; set; }
@@ -68,7 +72,9 @@ public class UpdateEntryDto
 {
     public int? PlatformId { get; set; }
     public string? Status { get; set; }
+    [Range(0, 100000)]
     public decimal? HoursPlayed { get; set; }
+    [Range(1, 10)]
     public int? Rating { get; set; }
     public string? Notes { get; set; }
     public int? AchievementsEarned { get; set; }

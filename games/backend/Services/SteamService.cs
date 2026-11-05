@@ -33,11 +33,14 @@ public class SteamService
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
 
-        var games = doc.RootElement
-            .GetProperty("response")
-            .GetProperty("games");
-
         var results = new List<SteamGameResult>();
+
+        // Steam omits "games" entirely when the profile/game details are private
+        if (!doc.RootElement.GetProperty("response").TryGetProperty("games", out var games))
+        {
+            _logger.LogWarning("Steam returned no games — is the profile's game details setting public?");
+            return results;
+        }
 
         foreach (var game in games.EnumerateArray())
         {

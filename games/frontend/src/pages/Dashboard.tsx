@@ -86,7 +86,7 @@ export default function Dashboard({ onNavigate }: Props) {
                         {g.userEntries[0].status.toUpperCase()}
                       </span>
                     )}
-                    {g.userEntries[0]?.hoursPlayed && (
+                    {!!g.userEntries[0]?.hoursPlayed && (
                       <span>{g.userEntries[0].hoursPlayed}h played</span>
                     )}
                   </div>

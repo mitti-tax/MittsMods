@@ -37,9 +37,11 @@ public class IgdbService
         var token = await GetAccessTokenAsync();
         var clientId = _config["Twitch:ClientId"];
 
-        // IGDB uses POST requests with a body query language
+        // IGDB uses POST requests with a body query language.
+        // Strip quotes/backslashes so a title like `"Hello" World` can't break out of the search string.
+        var safeQuery = query.Replace("\\", "").Replace("\"", "");
         var body = $@"
-            search ""{query}"";
+            search ""{safeQuery}"";
             fields name, summary, cover.url, first_release_date,
                    genres.name, involved_companies.developer,
                    involved_companies.company.name,
