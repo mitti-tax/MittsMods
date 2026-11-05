@@ -25,6 +25,9 @@ public class UserEntry
 
     public EntrySource Source { get; set; } = EntrySource.Manual;
 
+    // From Steam: when the game was last launched
+    public DateTime? LastPlayedAt { get; set; }
+
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -32,6 +35,26 @@ public class UserEntry
 
     public Game Game { get; set; } = null!;
     public Platform Platform { get; set; } = null!;
+    public ICollection<StatusChange> History { get; set; } = new List<StatusChange>();
+
+    // Every status change goes through here: it fills the start/finish dates and logs the change
+    public void SetStatus(PlayStatus status)
+    {
+        if (status == Status && Id != 0) return; // a new entry always logs its first status
+        var now = DateTime.UtcNow;
+        Status = status;
+        if (status == PlayStatus.Playing) StartedAt ??= now;
+        if (status == PlayStatus.Completed) CompletedAt ??= now;
+        History.Add(new StatusChange { Status = status, ChangedAt = now });
+    }
+}
+
+public class StatusChange
+{
+    public int Id { get; set; }
+    public int UserEntryId { get; set; }
+    public PlayStatus Status { get; set; }
+    public DateTime ChangedAt { get; set; }
 }
 
 public enum PlayStatus
@@ -40,7 +63,8 @@ public enum PlayStatus
     Playing,
     Completed,
     Dropped,
-    OnHold
+    OnHold,
+    Wishlist
 }
 
 public enum PlayMode

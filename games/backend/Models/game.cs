@@ -22,6 +22,12 @@ public class Game
 
     public bool IsFavourite { get; set; } = false;
 
+    // Hidden games stay in the database so a Steam sync doesn't add them back
+    public bool IsHidden { get; set; }
+
+    // Typical playthrough length from IGDB ("normally" time to beat)
+    public int? TimeToBeatHours { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation — one game can have many user log entries (e.g. played on multiple platforms)

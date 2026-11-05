@@ -9,6 +9,8 @@ public class SteamGameResult
     public string Name { get; set; } = string.Empty;
     public decimal HoursPlayed { get; set; }
     public string? CoverUrl { get; set; }
+    public DateTime? LastPlayedAt { get; set; }
+    public bool PlayedRecently { get; set; } // any playtime in the last two weeks
 }
 
 /// <summary>

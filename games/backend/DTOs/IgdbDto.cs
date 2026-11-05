@@ -56,3 +56,10 @@ public class IgdbRawCompany
 {
     public string? name { get; set; }
 }
+
+public class IgdbRawTimeToBeat
+{
+    public int game_id { get; set; }
+    public int? hastily { get; set; }
+    public int? normally { get; set; }
+}

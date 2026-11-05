@@ -31,9 +31,11 @@ public class SteamController : ControllerBase
     // -------------------------------------------------------
     // POST /api/steam/sync
     // Imports your Steam library into the games database
-    // - Adds new games not already tracked
-    // - Updates hours played for existing Steam entries
-    // - Sets cover/metadata from the exact IGDB match for each Steam app id
+    // - Adds new games not already tracked (hidden ones count as tracked)
+    // - Updates hours, last played and achievements for games played since the last sync
+    // - Moves a Backlog game to Playing when Steam shows playtime in the last two weeks;
+    //   any other status you've set is left alone
+    // - Sets cover/metadata and time to beat from the exact IGDB match for each Steam app id
     // -------------------------------------------------------
     [HttpPost("sync")]
     public async Task<ActionResult<SteamSyncResult>> Sync()
@@ -61,62 +63,90 @@ public class SteamController : ControllerBase
             .Where(g => g.SteamAppId != null)
             .ToDictionaryAsync(g => g.SteamAppId!.Value);
 
-        // One batched IGDB request for the whole library. IGDB is optional metadata, so a
-        // failure (e.g. rate limit) must not abort the sync — or wipe metadata already stored.
+        // IGDB is only asked about what's missing: details for new games, and time to beat for games
+        // that don't have one yet. It's optional metadata, so a failure (e.g. rate limit) must not
+        // abort the sync.
+        var newAppIds = library.Select(g => g.SteamAppId).Where(id => !existingByAppId.ContainsKey(id)).ToList();
         Dictionary<int, IgdbGameResult>? igdb = null;
-        try { igdb = await _igdb.GetBySteamAppIdsAsync(library.Select(g => g.SteamAppId)); }
-        catch (Exception ex) { _logger.LogWarning("IGDB lookup failed: {Message}", ex.Message); }
+        Dictionary<int, int>? timeToBeat = null;
+        if (newAppIds.Count > 0)
+        {
+            try { igdb = await _igdb.GetBySteamAppIdsAsync(newAppIds); }
+            catch (Exception ex) { _logger.LogWarning("IGDB lookup failed: {Message}", ex.Message); }
+        }
+        var ttbIds = (igdb?.Values.Select(m => m.Id) ?? [])
+            .Concat(existingByAppId.Values.Where(g => g.TimeToBeatHours == null && g.IgdbId != null).Select(g => g.IgdbId!.Value))
+            .ToList();
+        if (ttbIds.Count > 0)
+        {
+            try { timeToBeat = await _igdb.GetTimeToBeatAsync(ttbIds); }
+            catch (Exception ex) { _logger.LogWarning("IGDB time to beat failed: {Message}", ex.Message); }
+        }
 
-        // Achievements for new games, a few at a time (one Steam call per game)
-        var newGames = library.Where(g => !existingByAppId.ContainsKey(g.SteamAppId)).ToList();
+        // Achievements only for new games and games played since the last sync (one Steam call each)
+        var needAchievements = library.Where(g =>
+            !existingByAppId.TryGetValue(g.SteamAppId, out var known)
+            || (SteamEntry(known) is { } e && e.HoursPlayed != g.HoursPlayed)).ToList();
         var achievements = new ConcurrentDictionary<int, SteamAchievementResult>();
-        await Parallel.ForEachAsync(newGames, new ParallelOptions { MaxDegreeOfParallelism = 8 },
+        await Parallel.ForEachAsync(needAchievements, new ParallelOptions { MaxDegreeOfParallelism = 8 },
             async (g, _) => achievements[g.SteamAppId] = await _steam.GetAchievementsAsync(g.SteamAppId));
 
         foreach (var steamGame in library)
         {
             var match = igdb?.GetValueOrDefault(steamGame.SteamAppId);
+            achievements.TryGetValue(steamGame.SteamAppId, out var achieved);
 
             if (existingByAppId.TryGetValue(steamGame.SteamAppId, out var existing))
             {
-                // Re-apply metadata so games imported with a wrong fuzzy match get corrected
-                if (igdb != null) ApplyMetadata(existing, match, steamGame);
+                // Details already stored (from the first import or Edit Details) are never overwritten;
+                // the only gap filled is a missing time to beat for the game's own IGDB id
+                if (existing.TimeToBeatHours == null && existing.IgdbId is int igdbId
+                    && timeToBeat?.TryGetValue(igdbId, out var hours) == true)
+                    existing.TimeToBeatHours = hours;
 
-                // Update hours on the existing Steam entry
-                var entry = existing.UserEntries.FirstOrDefault(e => e.Source == EntrySource.Steam);
-                if (entry != null)
-                {
-                    entry.HoursPlayed = steamGame.HoursPlayed;
-                    entry.UpdatedAt = DateTime.UtcNow;
-                    result.Updated++;
-                }
-                else
+                var entry = SteamEntry(existing);
+                if (entry == null)
                 {
                     result.Skipped++;
+                    continue;
+                }
+                entry.LastPlayedAt = steamGame.LastPlayedAt;
+                if (steamGame.PlayedRecently && entry.Status is PlayStatus.Backlog or PlayStatus.Wishlist)
+                    entry.SetStatus(PlayStatus.Playing);
+                // Only touch UpdatedAt when something changed, so "recent" means recent
+                if (entry.HoursPlayed != steamGame.HoursPlayed)
+                {
+                    entry.HoursPlayed = steamGame.HoursPlayed;
+                    if (achieved?.AchievementsTotal != null)
+                    {
+                        entry.AchievementsEarned = achieved.AchievementsEarned;
+                        entry.AchievementsTotal  = achieved.AchievementsTotal;
+                    }
+                    entry.UpdatedAt = DateTime.UtcNow;
+                    result.Updated++;
                 }
                 continue;
             }
 
-            var achieved = achievements[steamGame.SteamAppId];
+            var newEntry = new UserEntry
+            {
+                PlatformId          = pcPlatform.Id,
+                HoursPlayed         = steamGame.HoursPlayed,
+                LastPlayedAt        = steamGame.LastPlayedAt,
+                AchievementsEarned  = achieved?.AchievementsEarned,
+                AchievementsTotal   = achieved?.AchievementsTotal,
+                Source              = EntrySource.Steam,
+            };
+            // Owned but not played lately is backlog; only recent playtime counts as Playing
+            newEntry.SetStatus(steamGame.PlayedRecently ? PlayStatus.Playing : PlayStatus.Backlog);
+
             var game = new Game
             {
                 Title       = steamGame.Name,
                 SteamAppId  = steamGame.SteamAppId,
-                UserEntries = new List<UserEntry>
-                {
-                    new UserEntry
-                    {
-                        PlatformId          = pcPlatform.Id,
-                        Status              = steamGame.HoursPlayed == 0 ? PlayStatus.Backlog : PlayStatus.Playing,
-                        HoursPlayed         = steamGame.HoursPlayed,
-                        AchievementsEarned  = achieved.AchievementsEarned,
-                        AchievementsTotal   = achieved.AchievementsTotal,
-                        Source              = EntrySource.Steam,
-                        UpdatedAt           = DateTime.UtcNow
-                    }
-                }
+                UserEntries = new List<UserEntry> { newEntry }
             };
-            ApplyMetadata(game, match, steamGame);
+            ApplyMetadata(game, match, steamGame, timeToBeat);
 
             _db.Games.Add(game);
             result.Added++;
@@ -127,9 +157,16 @@ public class SteamController : ControllerBase
         return Ok(result);
     }
 
+    private static UserEntry? SteamEntry(Game g) =>
+        g.UserEntries.FirstOrDefault(e => e.Source == EntrySource.Steam);
+
     // No exact IGDB match means no metadata: better blank than another game's details
-    private static void ApplyMetadata(Game game, IgdbGameResult? match, SteamGameResult steamGame)
+    private static void ApplyMetadata(Game game, IgdbGameResult? match, SteamGameResult steamGame,
+        Dictionary<int, int>? timeToBeat)
     {
+        // null = the lookup failed, so keep what's stored
+        if (timeToBeat != null)
+            game.TimeToBeatHours = match != null && timeToBeat.TryGetValue(match.Id, out var h) ? h : null;
         game.IgdbId      = match?.Id;
         game.CoverUrl    = match?.CoverUrl ?? steamGame.CoverUrl;
         game.Genre       = match?.Genres.FirstOrDefault();

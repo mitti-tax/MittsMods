@@ -23,16 +23,17 @@ var connectionString = ConvertDatabaseUrl(rawUrl!);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Slows down password guessing on /api/auth/login
-// ponytail: one global bucket (behind the tunnel every client shares an IP anyway); per-IP needs CF-Connecting-IP
+// Slows down password guessing on /api/auth/login: 5 tries a minute per visitor.
+// Behind the Cloudflare tunnel every request comes from cloudflared, so the visitor is
+// CF-Connecting-IP (set by Cloudflare; the API port is only open on the server's loopback).
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.AddFixedWindowLimiter("login", w =>
-    {
-        w.PermitLimit = 5;
-        w.Window = TimeSpan.FromMinutes(1);
-    });
+    o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault()
+            ?? ctx.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1) }));
 });
 
 builder.Services.AddCors(options =>
@@ -52,7 +53,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+// No UseHttpsRedirection: Cloudflare terminates HTTPS and the container only speaks HTTP
 app.UseCors("FrontendPolicy");
 app.UseRateLimiter();
 

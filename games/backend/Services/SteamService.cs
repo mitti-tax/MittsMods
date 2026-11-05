@@ -48,6 +48,10 @@ public class SteamService
             var name       = game.GetProperty("name").GetString() ?? string.Empty;
             var minutesPlayed = game.TryGetProperty("playtime_forever", out var pt)
                 ? pt.GetInt32() : 0;
+            // Steam sends 0 (or nothing) for never launched
+            var lastPlayed = game.TryGetProperty("rtime_last_played", out var lp) && lp.GetInt64() > 0
+                ? DateTimeOffset.FromUnixTimeSeconds(lp.GetInt64()).UtcDateTime : (DateTime?)null;
+            var recent = game.TryGetProperty("playtime_2weeks", out var p2) && p2.GetInt32() > 0;
 
             // Cover art from Steam CDN
             var coverUrl = $"https://cdn.akamai.steamstatic.com/steam/apps/{appId}/library_600x900.jpg";
@@ -57,7 +61,9 @@ public class SteamService
                 SteamAppId     = appId,
                 Name           = name,
                 HoursPlayed    = Math.Round(minutesPlayed / 60.0m, 1),
-                CoverUrl       = coverUrl
+                CoverUrl       = coverUrl,
+                LastPlayedAt   = lastPlayed,
+                PlayedRecently = recent
             });
         }
 

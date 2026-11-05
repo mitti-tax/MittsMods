@@ -34,8 +34,39 @@ services:
       Steam__SteamId: ${STEAM_ID}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
 
+  # Nightly dump to ./backups on the server, keeping 14 days. Copy that folder off the
+  # server too (rclone, a NAS, cloud storage): a dead disk takes the backups with it.
+  # Restore: gunzip -c backups/mittsmods-DATE.sql.gz | docker compose exec -T db psql -U mittsmods -d mittsmods
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          f=/backups/mittsmods-$$(date +%F).sql.gz
+          # Dump to a file first: in a pipe a failed pg_dump would still leave a valid, empty .gz.
+          # Old backups are pruned only after a good one, so a broken job can't delete them all.
+          if pg_dump -h db -U mittsmods --clean --if-exists -f /tmp/dump.sql mittsmods \
+            && gzip -c /tmp/dump.sql > $$f.tmp && mv $$f.tmp $$f; then
+            find /backups -name 'mittsmods-*.sql.gz' -mtime +14 -delete
+          else
+            echo "backup failed"
+          fi
+          rm -f /tmp/dump.sql $$f.tmp
+          sleep 86400
+        done
+
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2026.10.7
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:

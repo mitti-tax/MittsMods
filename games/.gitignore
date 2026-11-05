@@ -1,10 +1,6 @@
 # .NET
 backend/bin/
 backend/obj/
-backend/*.db
-backend/*.db-shm
-backend/*.db-wal
-
 obj/
 bin/
 
@@ -19,5 +15,6 @@ frontend/dist/
 .vscode/
 .idea/
 *.user
-# Server secrets
+# Server secrets and database dumps
 .env
+backups/

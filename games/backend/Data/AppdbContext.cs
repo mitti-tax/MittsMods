@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Game> Games => Set<Game>();
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<UserEntry> UserEntries => Set<UserEntry>();
+    public DbSet<StatusChange> StatusChanges => Set<StatusChange>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +27,14 @@ public class AppDbContext : DbContext
             .WithMany(p => p.UserEntries)
             .HasForeignKey(e => e.PlatformId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<StatusChange>()
+            .HasOne<UserEntry>()
+            .WithMany(e => e.History)
+            .HasForeignKey(c => c.UserEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<StatusChange>()
+            .Property(c => c.Status).HasConversion<string>();
 
         // One game per Steam app (NULLs allowed for manual adds), so a sync can never duplicate
         modelBuilder.Entity<Game>()

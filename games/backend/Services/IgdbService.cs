@@ -72,12 +72,37 @@ public class IgdbService
         return results;
     }
 
+    private const int MaxTimeToBeatHours = 300;
+
+    // Typical hours to beat per IGDB game id ("normally", else "hastily")
+    public async Task<Dictionary<int, int>> GetTimeToBeatAsync(IEnumerable<int> igdbIds)
+    {
+        var results = new Dictionary<int, int>();
+        foreach (var chunk in igdbIds.Distinct().Chunk(500))
+        {
+            var rows = await QueryAsync<IgdbRawTimeToBeat>("game_time_to_beats", $@"
+                fields game_id, hastily, normally;
+                where game_id = ({string.Join(",", chunk)});
+                limit 500;
+            ");
+            foreach (var r in rows)
+            {
+                if ((r.normally ?? r.hastily) is not int seconds || seconds <= 0) continue;
+                var hours = Math.Max(1, (int)Math.Round(seconds / 3600.0));
+                // Player-reported times for sandbox/multiplayer games are junk (Garry's Mod: 33,501h)
+                // A flat cap is enough for now; make it per-genre if a long RPG ever gets cut off
+                if (hours <= MaxTimeToBeatHours) results[r.game_id] = hours;
+            }
+        }
+        return results;
+    }
+
     private const string GameFields =
         "name, summary, cover.url, first_release_date, genres.name, " +
         "involved_companies.developer, involved_companies.company.name, " +
         "platforms.name, platforms.abbreviation";
 
-    private async Task<List<T>> QueryAsync<T>(string endpoint, string body)
+    private async Task<List<T>> QueryAsync<T>(string endpoint, string body, bool retried = false)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.igdb.com/v4/{endpoint}")
         {
@@ -87,6 +112,12 @@ public class IgdbService
         request.Headers.Add("Authorization", $"Bearer {await GetAccessTokenAsync()}");
 
         var response = await _http.SendAsync(request);
+        // A revoked or expired token: drop the cached one and try once with a fresh token
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && !retried)
+        {
+            _cache.Remove(TokenCacheKey);
+            return await QueryAsync<T>(endpoint, body, true);
+        }
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();

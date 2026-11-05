@@ -48,6 +48,9 @@ namespace MittsModsApi.Migrations
                     b.Property<bool>("IsFavourite")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("ReleaseYear")
                         .HasColumnType("integer");
 
@@ -56,6 +59,9 @@ namespace MittsModsApi.Migrations
 
                     b.Property<string>("Summary")
                         .HasColumnType("text");
+
+                    b.Property<int?>("TimeToBeatHours")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -253,6 +259,31 @@ namespace MittsModsApi.Migrations
                         });
                 });
 
+            modelBuilder.Entity("MittsModsApi.Models.StatusChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserEntryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserEntryId");
+
+                    b.ToTable("StatusChanges");
+                });
+
             modelBuilder.Entity("MittsModsApi.Models.UserEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -282,6 +313,9 @@ namespace MittsModsApi.Migrations
 
                     b.Property<decimal?>("HoursPlayed")
                         .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("LastPlayedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Mode")
                         .HasColumnType("text");
@@ -318,6 +352,15 @@ namespace MittsModsApi.Migrations
                     b.ToTable("UserEntries");
                 });
 
+            modelBuilder.Entity("MittsModsApi.Models.StatusChange", b =>
+                {
+                    b.HasOne("MittsModsApi.Models.UserEntry", null)
+                        .WithMany("History")
+                        .HasForeignKey("UserEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MittsModsApi.Models.UserEntry", b =>
                 {
                     b.HasOne("MittsModsApi.Models.Game", "Game")
@@ -345,6 +388,11 @@ namespace MittsModsApi.Migrations
             modelBuilder.Entity("MittsModsApi.Models.Platform", b =>
                 {
                     b.Navigation("UserEntries");
+                });
+
+            modelBuilder.Entity("MittsModsApi.Models.UserEntry", b =>
+                {
+                    b.Navigation("History");
                 });
 #pragma warning restore 612, 618
         }
