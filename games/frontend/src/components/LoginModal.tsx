@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
+import SheetHeader from "./SheetHeader";
 
 interface Props {
   onClose: () => void;
@@ -40,16 +41,17 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
         style={{ maxWidth: "380px" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-header">
-          <span className="modal-title">Admin Login</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <SheetHeader
+          title="Admin Login"
+          onCancel={onClose}
+          confirmLabel={loading ? "Checking…" : "Log In"}
+          onConfirm={handleSubmit}
+          confirmDisabled={loading || !password.trim()}
+        />
         <div className="modal-body">
           <p
             style={{
-              fontSize: "13px",
+              fontSize: "0.8125rem",
               color: "var(--text-muted)",
               marginBottom: "20px",
             }}
@@ -62,6 +64,8 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
             <input
               className="form-input"
               type="password"
+              autoComplete="current-password"
+              enterKeyHint="go"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -73,7 +77,7 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
           {error && (
             <div
               style={{
-                fontSize: "12px",
+                fontSize: "0.75rem",
                 color: "var(--red)",
                 fontFamily: "var(--font-mono)",
                 marginBottom: "12px",

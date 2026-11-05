@@ -28,7 +28,12 @@ export default function Dashboard({ onNavigate }: Props) {
     .slice(0, 8);
 
   useEffect(() => {
-    if (slideshowGames.length < 2) return;
+    // No auto-advance under Reduce Motion
+    if (
+      slideshowGames.length < 2 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
     const timer = setInterval(
       () => setSlide((s) => (s + 1) % slideshowGames.length),
       4000,
@@ -63,7 +68,7 @@ export default function Dashboard({ onNavigate }: Props) {
           >
             <div className="empty-state">
               <p>NO GAMES LOGGED YET</p>
-              <p style={{ fontSize: "11px", marginTop: "8px" }}>
+              <p style={{ fontSize: "0.6875rem", marginTop: "8px" }}>
                 Log in and use Sync Steam to import your library
               </p>
             </div>
@@ -99,6 +104,7 @@ export default function Dashboard({ onNavigate }: Props) {
                   key={i}
                   className={`slide-dot ${i === slide ? "active" : ""}`}
                   onClick={() => setSlide(i)}
+                  aria-label={`Show slide ${i + 1}`}
                 />
               ))}
             </div>

@@ -12,6 +12,7 @@ import {
   type HardwareType,
 } from "../api/client";
 import { useEscape } from "../hooks/useEscape";
+import SheetHeader from "../components/SheetHeader";
 
 interface Props {
   filter: "all" | string;
@@ -47,16 +48,16 @@ function PermissionDeniedModal({
       >
         <div className="modal-header">
           <span className="modal-title">Access Restricted</span>
-          <button className="modal-close" onClick={onClose}>
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
         <div className="modal-body">
           <div style={{ textAlign: "center", padding: "8px 0 20px" }}>
-            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔒</div>
+            <div style={{ fontSize: "2rem", marginBottom: "12px" }}>🔒</div>
             <p
               style={{
-                fontSize: "14px",
+                fontSize: "0.875rem",
                 color: "var(--text-muted)",
                 marginBottom: "8px",
               }}
@@ -65,7 +66,7 @@ function PermissionDeniedModal({
             </p>
             <p
               style={{
-                fontSize: "12px",
+                fontSize: "0.75rem",
                 color: "var(--text-faint)",
                 fontFamily: "var(--font-mono)",
               }}
@@ -202,7 +203,7 @@ export default function GamesPage({
     <>
       <div className="section">
         <div className="section-header">
-          <span className="section-title">Library</span>
+          <span className="section-title desktop-only">Library</span>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             {/* Edit mode — only shown when logged in */}
             {isLoggedIn && (
@@ -231,7 +232,7 @@ export default function GamesPage({
               padding: "10px 14px",
               marginBottom: "16px",
               fontFamily: "var(--font-mono)",
-              fontSize: "11px",
+              fontSize: "0.6875rem",
               color: "var(--blue-bright)",
               letterSpacing: "0.06em",
             }}
@@ -250,7 +251,7 @@ export default function GamesPage({
               padding: "10px 14px",
               marginBottom: "16px",
               fontFamily: "var(--font-mono)",
-              fontSize: "11px",
+              fontSize: "0.6875rem",
               color: "var(--text-faint)",
               letterSpacing: "0.04em",
               display: "flex",
@@ -264,9 +265,11 @@ export default function GamesPage({
                 background: "none",
                 border: "none",
                 color: "var(--blue)",
-                fontSize: "11px",
+                fontSize: "0.6875rem",
                 cursor: "pointer",
                 fontFamily: "var(--font-mono)",
+                padding: "14px 0 14px 16px",
+                margin: "-14px 0",
               }}
               onClick={onLoginRequest}
             >
@@ -491,25 +494,30 @@ function AddGameModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">Add Game</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <SheetHeader
+          title="Add Game"
+          onCancel={onClose}
+          confirmLabel="Add"
+          onConfirm={handleSubmit}
+          confirmDisabled={!query.trim() && !selected}
+        />
         <div className="modal-body">
           <div className="form-group">
             <label className="form-label">Search IGDB</label>
             <input
               className="form-input"
               placeholder="Start typing a game name..."
+              type="search"
+              enterKeyHint="search"
+              autoCorrect="off"
+              autoCapitalize="off"
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
             />
             {searching && (
               <div
                 style={{
-                  fontSize: "11px",
+                  fontSize: "0.6875rem",
                   color: "var(--text-faint)",
                   padding: "6px 0",
                   fontFamily: "var(--font-mono)",
@@ -576,12 +584,12 @@ function AddGameModal({
                 <div style={{ fontWeight: 600, marginBottom: "4px" }}>
                   {selected.name}
                 </div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                   {selected.releaseYear} · {selected.genres.join(", ")}
                 </div>
                 <div
                   style={{
-                    fontSize: "11px",
+                    fontSize: "0.6875rem",
                     color: "var(--blue)",
                     marginTop: "2px",
                     fontFamily: "var(--font-mono)",
@@ -682,6 +690,7 @@ function AddGameModal({
                 type="number"
                 min="0"
                 step="0.5"
+                inputMode="decimal"
                 placeholder="0"
                 value={hours}
                 onChange={(e) => setHours(e.target.value)}
@@ -694,6 +703,7 @@ function AddGameModal({
                 type="number"
                 min="1"
                 max="10"
+                inputMode="numeric"
                 placeholder="—"
                 value={rating}
                 onChange={(e) => setRating(e.target.value)}
@@ -773,12 +783,21 @@ function GameDetailModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">{game.title}</span>
-          <button className="modal-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        {entry && editing && isLoggedIn ? (
+          <SheetHeader
+            title={game.title}
+            onCancel={() => setEditing(false)}
+            confirmLabel="Save"
+            onConfirm={handleSave}
+          />
+        ) : (
+          <div className="modal-header">
+            <span className="modal-title">{game.title}</span>
+            <button className="modal-close" onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+          </div>
+        )}
         <div className="modal-body">
           <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
             {game.coverUrl && (
@@ -798,7 +817,7 @@ function GameDetailModal({
               {game.developer && (
                 <div
                   style={{
-                    fontSize: "13px",
+                    fontSize: "0.8125rem",
                     color: "var(--text-muted)",
                     marginBottom: "4px",
                   }}
@@ -810,7 +829,7 @@ function GameDetailModal({
                 <div
                   style={{
                     fontFamily: "var(--font-mono)",
-                    fontSize: "12px",
+                    fontSize: "0.75rem",
                     color: "var(--text-faint)",
                     marginBottom: "8px",
                   }}
@@ -821,7 +840,7 @@ function GameDetailModal({
               {game.genre && (
                 <div
                   style={{
-                    fontSize: "12px",
+                    fontSize: "0.75rem",
                     color: "var(--text-faint)",
                     marginBottom: "8px",
                   }}
@@ -845,7 +864,7 @@ function GameDetailModal({
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",
-                        fontSize: "11px",
+                        fontSize: "0.6875rem",
                         color: "var(--text-muted)",
                       }}
                     >
@@ -856,7 +875,7 @@ function GameDetailModal({
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",
-                        fontSize: "11px",
+                        fontSize: "0.6875rem",
                         color: "var(--blue-bright)",
                       }}
                     >
@@ -867,7 +886,7 @@ function GameDetailModal({
                     <span
                       style={{
                         fontFamily: "var(--font-mono)",
-                        fontSize: "10px",
+                        fontSize: "0.625rem",
                         color: "var(--text-faint)",
                         textTransform: "uppercase",
                       }}
@@ -878,7 +897,7 @@ function GameDetailModal({
                   <span
                     style={{
                       fontFamily: "var(--font-mono)",
-                      fontSize: "10px",
+                      fontSize: "0.625rem",
                       color:
                         entry.hardware === "Modded"
                           ? "var(--orange)"
@@ -891,7 +910,7 @@ function GameDetailModal({
                   <span
                     style={{
                       fontFamily: "var(--font-mono)",
-                      fontSize: "10px",
+                      fontSize: "0.625rem",
                       color: "var(--text-faint)",
                       textTransform: "uppercase",
                     }}
@@ -906,7 +925,7 @@ function GameDetailModal({
           {game.summary && (
             <p
               style={{
-                fontSize: "13px",
+                fontSize: "0.8125rem",
                 color: "var(--text-muted)",
                 marginBottom: "20px",
                 lineHeight: "1.6",
@@ -944,6 +963,7 @@ function GameDetailModal({
                     type="number"
                     min="0"
                     step="0.5"
+                inputMode="decimal"
                     value={hours}
                     onChange={(e) => setHours(e.target.value)}
                   />
@@ -993,6 +1013,7 @@ function GameDetailModal({
                   type="number"
                   min="1"
                   max="10"
+                inputMode="numeric"
                   value={rating}
                   onChange={(e) => setRating(e.target.value)}
                 />
@@ -1027,7 +1048,7 @@ function GameDetailModal({
                     borderRadius: "var(--radius-md)",
                     padding: "12px 14px",
                     marginBottom: "16px",
-                    fontSize: "13px",
+                    fontSize: "0.8125rem",
                     color: "var(--text-muted)",
                   }}
                 >
@@ -1039,7 +1060,7 @@ function GameDetailModal({
                   <div
                     style={{
                       fontFamily: "var(--font-mono)",
-                      fontSize: "12px",
+                      fontSize: "0.75rem",
                       color: "var(--text-muted)",
                       marginBottom: "16px",
                     }}
