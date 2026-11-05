@@ -1,0 +1,62 @@
+name: Deploy
+
+# The blog and the game library share the gh-pages branch, so one workflow deploys both in a
+# single push. Two workflows would race each other, or (in a shared concurrency group) cancel
+# each other's queued run.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "about.html"
+      - "projects.html"
+      - "style.css"
+      - "favicon.svg"
+      - "posts/**"
+      - "images/**"
+      - "games/frontend/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+# One at a time. A newer push replaces a queued run, which is fine: every run deploys everything.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: games/frontend/package-lock.json
+
+      - name: Build the game library
+        working-directory: games/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the site
+        run: |
+          mkdir -p /tmp/site
+          cp index.html about.html projects.html style.css favicon.svg /tmp/site/
+          cp -r posts images /tmp/site/
+          cp -r games/frontend/dist /tmp/site/games
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/site
+          keep_files: true
+          cname: mittsmods.com
