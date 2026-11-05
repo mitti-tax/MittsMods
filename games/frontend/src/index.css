@@ -1140,6 +1140,7 @@ body:has(.modal-overlay) {
 /* ================================================
    MOBILE — iOS-style shell: translucent nav bar,
    bottom tab bar, sheets, safe areas, 44pt targets.
+   Applies to phones in portrait (narrow) and landscape (short + touch).
    Desktop keeps the sidebar.
    ================================================ */
 
@@ -1150,7 +1151,7 @@ body:has(.modal-overlay) {
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   .sidebar {
     display: none;
   }
@@ -1414,7 +1415,7 @@ body:has(.modal-overlay) {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   /* Dynamic Type: rem sizes follow the iPhone text-size setting */
   @supports (font: -apple-system-body) {
     html {
@@ -1503,7 +1504,7 @@ body:has(.modal-overlay) {
 }
 
 /* Enhancements on phones */
-@media (max-width: 768px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   .library-toolbar {
     grid-template-columns: 1fr 1fr;
   }
@@ -1526,6 +1527,96 @@ body:has(.modal-overlay) {
   /* The base rule's background shorthand reset the clip, blowing the dot up to its full tap area */
   .slide-dot.active {
     background-clip: content-box;
+  }
+}
+
+/* Phones in landscape: compact bars like iOS, wider layouts, centred sheets */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  /* iOS drops the large title in landscape; the inline title stays in the bar */
+  .large-title {
+    display: none;
+  }
+  .mobile-topbar,
+  .mobile-topbar:not(.scrolled) {
+    height: calc(32px + env(safe-area-inset-top));
+    background: rgba(17, 17, 20, 0.82);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom-color: var(--border);
+  }
+  .mobile-topbar:not(.scrolled) .mobile-topbar-title {
+    opacity: 1;
+  }
+  .mobile-topbar-title {
+    font-size: min(1rem, 18px);
+  }
+
+  /* Compact tab bar: icon beside the label */
+  .tab {
+    flex-direction: row;
+    gap: 6px;
+    min-height: 32px;
+    font-size: min(0.75rem, 14px);
+  }
+  .tab svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .main {
+    padding-top: calc(32px + env(safe-area-inset-top));
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+  .toast {
+    left: 25%;
+    right: 25%;
+    bottom: calc(32px + env(safe-area-inset-bottom) + 10px);
+  }
+
+  /* Dashboard: one row of stats, a hero that leaves room for content */
+  .hero-slideshow {
+    height: min(220px, 55dvh);
+  }
+  .stats-bar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .stat-cell {
+    padding: 14px 20px;
+  }
+  .stat-cell:nth-child(2) {
+    border-right: 1px solid var(--border);
+  }
+  .stat-cell:nth-child(n + 3) {
+    border-top: 0;
+  }
+
+  /* Library: less vertical padding, and fill the width instead of two giant cards */
+  .section {
+    padding: 14px 16px;
+  }
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .library-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .library-search {
+    grid-column: auto;
+  }
+  .section-actions {
+    width: auto;
+  }
+  .section-actions .btn {
+    flex: none;
+  }
+
+  /* Sheets: centred at a readable width, clear of the Dynamic Island */
+  .modal {
+    max-width: min(100%, 620px) !important;
+    max-height: calc(100dvh - 8px);
+  }
+  .action-sheet {
+    max-width: 420px;
   }
 }
 
