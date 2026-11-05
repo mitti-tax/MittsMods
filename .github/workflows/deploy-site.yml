@@ -8,6 +8,7 @@ on:
       - "about.html"
       - "projects.html"
       - "style.css"
+      - "favicon.svg"
       - "posts/**"
       - "images/**"
       - ".github/workflows/deploy-site.yml"
@@ -25,7 +26,7 @@ jobs:
       - name: Prepare deploy directory
         run: |
           mkdir -p /tmp/site
-          cp index.html about.html projects.html style.css /tmp/site/
+          cp index.html about.html projects.html style.css favicon.svg /tmp/site/
           [ -d posts ] && cp -r posts /tmp/site/
           [ -d images ] && cp -r images /tmp/site/
 

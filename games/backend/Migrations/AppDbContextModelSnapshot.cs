@@ -63,6 +63,9 @@ namespace MittsModsApi.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SteamAppId")
+                        .IsUnique();
+
                     b.ToTable("Games");
                 });
 

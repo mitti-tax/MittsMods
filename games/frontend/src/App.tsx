@@ -40,8 +40,9 @@ function App() {
       );
       // Remount the current page so it refetches the library
       setRefreshKey((k) => k + 1);
-    } catch {
-      showToast("Steam sync failed", "error");
+    } catch (e) {
+      const running = e instanceof Error && e.message.startsWith("API error 409");
+      showToast(running ? "A sync is already running" : "Steam sync failed", "error");
     } finally {
       setSyncing(false);
     }

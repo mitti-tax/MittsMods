@@ -34,35 +34,14 @@ public class IgdbService
             return cached;
         }
 
-        var token = await GetAccessTokenAsync();
-        var clientId = _config["Twitch:ClientId"];
-
         // IGDB uses POST requests with a body query language.
         // Strip quotes/backslashes so a title like `"Hello" World` can't break out of the search string.
         var safeQuery = query.Replace("\\", "").Replace("\"", "");
-        var body = $@"
+        var raw = await QueryAsync<IgdbRawGame>("games", $@"
             search ""{safeQuery}"";
-            fields name, summary, cover.url, first_release_date,
-                   genres.name, involved_companies.developer,
-                   involved_companies.company.name,
-                   platforms.name, platforms.abbreviation;
+            fields {GameFields};
             limit 20;
-        ";
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.igdb.com/v4/games")
-        {
-            Content = new StringContent(body)
-        };
-        request.Headers.Add("Client-ID", clientId);
-        request.Headers.Add("Authorization", $"Bearer {token}");
-
-        var response = await _http.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync();
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var raw = JsonSerializer.Deserialize<List<IgdbRawGame>>(json, options) ?? new();
+        ");
 
         var results = raw.Select(MapToResult).ToList();
 
@@ -70,6 +49,49 @@ public class IgdbService
         _cache.Set(cacheKey, results, TimeSpan.FromHours(1));
 
         return results;
+    }
+
+    // Exact IGDB games for Steam app ids, via IGDB's Steam links (external_game_source 1 = Steam).
+    // A name search is fuzzy and often ranks a spin-off or bundle first (Fallout -> Fallout Tactics).
+    public async Task<Dictionary<int, IgdbGameResult>> GetBySteamAppIdsAsync(IEnumerable<int> appIds)
+    {
+        var results = new Dictionary<int, IgdbGameResult>();
+        foreach (var chunk in appIds.Distinct().Chunk(500)) // 500 = IGDB's max page size
+        {
+            var uids = string.Join(",", chunk.Select(id => $"\"{id}\""));
+            var gameFields = string.Join(", ", GameFields.Split(", ").Select(f => "game." + f));
+            var links = await QueryAsync<IgdbRawExternalGame>("external_games", $@"
+                fields uid, {gameFields};
+                where uid = ({uids}) & external_game_source = 1;
+                limit 500;
+            ");
+            foreach (var link in links)
+                if (link.game != null && int.TryParse(link.uid, out var appId))
+                    results.TryAdd(appId, MapToResult(link.game));
+        }
+        return results;
+    }
+
+    private const string GameFields =
+        "name, summary, cover.url, first_release_date, genres.name, " +
+        "involved_companies.developer, involved_companies.company.name, " +
+        "platforms.name, platforms.abbreviation";
+
+    private async Task<List<T>> QueryAsync<T>(string endpoint, string body)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.igdb.com/v4/{endpoint}")
+        {
+            Content = new StringContent(body)
+        };
+        request.Headers.Add("Client-ID", _config["Twitch:ClientId"]);
+        request.Headers.Add("Authorization", $"Bearer {await GetAccessTokenAsync()}");
+
+        var response = await _http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return JsonSerializer.Deserialize<List<T>>(json, options) ?? new();
     }
 
 

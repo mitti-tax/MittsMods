@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MittsModsApi.Data;
@@ -24,15 +25,26 @@ public class SteamController : ControllerBase
         _logger = logger;
     }
 
+    // Only one sync at a time: two overlapping syncs both see the same games as "new" and add them twice
+    private static readonly SemaphoreSlim SyncLock = new(1, 1);
+
     // -------------------------------------------------------
     // POST /api/steam/sync
     // Imports your Steam library into the games database
     // - Adds new games not already tracked
     // - Updates hours played for existing Steam entries
-    // - Skips games already in the DB with matching SteamAppId
+    // - Sets cover/metadata from the exact IGDB match for each Steam app id
     // -------------------------------------------------------
     [HttpPost("sync")]
     public async Task<ActionResult<SteamSyncResult>> Sync()
+    {
+        if (!await SyncLock.WaitAsync(0))
+            return Conflict("A Steam sync is already running.");
+        try { return await RunSync(); }
+        finally { SyncLock.Release(); }
+    }
+
+    private async Task<ActionResult<SteamSyncResult>> RunSync()
     {
         var library = await _steam.GetLibraryAsync();
 
@@ -44,17 +56,32 @@ public class SteamController : ControllerBase
         var result = new SteamSyncResult();
 
         // One query for every already-tracked Steam game instead of one per library entry
-        var existingByAppId = (await _db.Games
-                .Include(g => g.UserEntries)
-                .Where(g => g.SteamAppId != null)
-                .ToListAsync())
-            .DistinctBy(g => g.SteamAppId)
-            .ToDictionary(g => g.SteamAppId!.Value);
+        var existingByAppId = await _db.Games
+            .Include(g => g.UserEntries)
+            .Where(g => g.SteamAppId != null)
+            .ToDictionaryAsync(g => g.SteamAppId!.Value);
+
+        // One batched IGDB request for the whole library. IGDB is optional metadata, so a
+        // failure (e.g. rate limit) must not abort the sync — or wipe metadata already stored.
+        Dictionary<int, IgdbGameResult>? igdb = null;
+        try { igdb = await _igdb.GetBySteamAppIdsAsync(library.Select(g => g.SteamAppId)); }
+        catch (Exception ex) { _logger.LogWarning("IGDB lookup failed: {Message}", ex.Message); }
+
+        // Achievements for new games, a few at a time (one Steam call per game)
+        var newGames = library.Where(g => !existingByAppId.ContainsKey(g.SteamAppId)).ToList();
+        var achievements = new ConcurrentDictionary<int, SteamAchievementResult>();
+        await Parallel.ForEachAsync(newGames, new ParallelOptions { MaxDegreeOfParallelism = 8 },
+            async (g, _) => achievements[g.SteamAppId] = await _steam.GetAchievementsAsync(g.SteamAppId));
 
         foreach (var steamGame in library)
         {
+            var match = igdb?.GetValueOrDefault(steamGame.SteamAppId);
+
             if (existingByAppId.TryGetValue(steamGame.SteamAppId, out var existing))
             {
+                // Re-apply metadata so games imported with a wrong fuzzy match get corrected
+                if (igdb != null) ApplyMetadata(existing, match, steamGame);
+
                 // Update hours on the existing Steam entry
                 var entry = existing.UserEntries.FirstOrDefault(e => e.Source == EntrySource.Steam);
                 if (entry != null)
@@ -70,48 +97,26 @@ public class SteamController : ControllerBase
                 continue;
             }
 
-            // Fetch achievements and IGDB metadata in parallel
-            var achievementsTask = _steam.GetAchievementsAsync(steamGame.SteamAppId);
-            var igdbTask = _igdb.SearchAsync(steamGame.Name);
-            var achievements = await achievementsTask;
-
-            // IGDB is optional metadata — a failure (e.g. rate limit) must not abort the whole sync
-            IgdbGameResult? igdbMatch = null;
-            try { igdbMatch = (await igdbTask).FirstOrDefault(); }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("IGDB lookup failed for {Name}: {Message}", steamGame.Name, ex.Message);
-            }
-
-            // Determine status based on hours played
-            var status = steamGame.HoursPlayed == 0
-                ? PlayStatus.Backlog
-                : PlayStatus.Playing;
-
+            var achieved = achievements[steamGame.SteamAppId];
             var game = new Game
             {
                 Title       = steamGame.Name,
-                CoverUrl    = igdbMatch?.CoverUrl ?? steamGame.CoverUrl,
-                Genre       = igdbMatch?.Genres.FirstOrDefault(),
-                ReleaseYear = igdbMatch?.ReleaseYear,
-                Developer   = igdbMatch?.Developers.FirstOrDefault(),
-                Summary     = igdbMatch?.Summary,
-                IgdbId      = igdbMatch?.Id,
                 SteamAppId  = steamGame.SteamAppId,
                 UserEntries = new List<UserEntry>
                 {
                     new UserEntry
                     {
                         PlatformId          = pcPlatform.Id,
-                        Status              = status,
+                        Status              = steamGame.HoursPlayed == 0 ? PlayStatus.Backlog : PlayStatus.Playing,
                         HoursPlayed         = steamGame.HoursPlayed,
-                        AchievementsEarned  = achievements.AchievementsEarned,
-                        AchievementsTotal   = achievements.AchievementsTotal,
+                        AchievementsEarned  = achieved.AchievementsEarned,
+                        AchievementsTotal   = achieved.AchievementsTotal,
                         Source              = EntrySource.Steam,
                         UpdatedAt           = DateTime.UtcNow
                     }
                 }
             };
+            ApplyMetadata(game, match, steamGame);
 
             _db.Games.Add(game);
             result.Added++;
@@ -120,5 +125,16 @@ public class SteamController : ControllerBase
 
         await _db.SaveChangesAsync();
         return Ok(result);
+    }
+
+    // No exact IGDB match means no metadata: better blank than another game's details
+    private static void ApplyMetadata(Game game, IgdbGameResult? match, SteamGameResult steamGame)
+    {
+        game.IgdbId      = match?.Id;
+        game.CoverUrl    = match?.CoverUrl ?? steamGame.CoverUrl;
+        game.Genre       = match?.Genres.FirstOrDefault();
+        game.ReleaseYear = match?.ReleaseYear;
+        game.Developer   = match?.Developers.FirstOrDefault();
+        game.Summary     = match?.Summary;
     }
 }

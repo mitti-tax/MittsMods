@@ -24,6 +24,12 @@ public class IgdbRawGame
     public List<IgdbRawPlatform>? platforms { get; set; }
 }
 
+public class IgdbRawExternalGame
+{
+    public string? uid { get; set; }
+    public IgdbRawGame? game { get; set; }
+}
+
 public class IgdbRawPlatform
 {
     public string? name { get; set; }

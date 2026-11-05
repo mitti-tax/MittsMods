@@ -27,6 +27,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.PlatformId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // One game per Steam app (NULLs allowed for manual adds), so a sync can never duplicate
+        modelBuilder.Entity<Game>()
+            .HasIndex(g => g.SteamAppId).IsUnique();
+
         // Store enums as strings for readability
         modelBuilder.Entity<UserEntry>()
             .Property(e => e.Status).HasConversion<string>();
