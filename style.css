@@ -697,3 +697,58 @@ time {
   background: #007acc;
   color: #fff;
 }
+
+/* --- Now playing (filled from the game library API) --- */
+.now-playing {
+  padding-top: 48px;
+}
+
+.now-playing-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.now-playing-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  transition: border-color var(--transition);
+}
+
+.now-playing-item:hover {
+  border-color: var(--beige-dim);
+}
+
+.now-playing-item img {
+  width: 44px;
+  height: 59px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.now-playing-item span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.now-playing-item strong {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing-item span span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}

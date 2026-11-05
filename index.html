@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MittsMods</title>
+    <meta name="description" content="A running log of console mods, homelab tinkering, and the code that ties it all together. By Dimitri (aka Mitt), Perth WA." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MittsMods" />
+    <meta property="og:title" content="MittsMods" />
+    <meta property="og:description" content="A running log of console mods, homelab tinkering, and the code that ties it all together. By Dimitri (aka Mitt), Perth WA." />
+    <meta property="og:url" content="https://mittsmods.com/" />
+    <meta property="og:image" content="https://mittsmods.com/images/dreamcast/20250719_014948413_iOS.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#1a1814" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -65,6 +74,15 @@
           <div class="intro-chip">Servers & Homelab</div>
           <div class="intro-chip">Code & Scripts</div>
         </div>
+      </section>
+
+      <!-- Filled from the game library API; stays hidden if it can't load -->
+      <section class="now-playing container" id="now-playing" hidden>
+        <div class="section-header">
+          <h2>Now Playing</h2>
+          <a href="/games/" class="view-all">Game Library →</a>
+        </div>
+        <div class="now-playing-list"></div>
       </section>
 
       <section class="about-snap container">
@@ -179,5 +197,43 @@
         </p>
       </div>
     </footer>
+    <script>
+      fetch("https://api.mittsmods.com/api/games")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((games) => {
+          const played = (g) => Date.parse(g.userEntries[0]?.lastPlayedAt || g.userEntries[0]?.updatedAt || 0) || 0;
+          const playing = games
+            .filter((g) => !g.isHidden && g.userEntries.some((e) => e.status === "Playing"))
+            .sort((a, b) => played(b) - played(a))
+            .slice(0, 3);
+          if (!playing.length) return;
+          const list = document.querySelector(".now-playing-list");
+          for (const g of playing) {
+            const a = document.createElement("a");
+            a.className = "now-playing-item";
+            a.href = `/games/#/dashboard?game=${g.id}`;
+            const hours = g.userEntries.reduce((s, e) => s + (e.hoursPlayed || 0), 0);
+            if (g.coverUrl) {
+              const img = document.createElement("img");
+              img.src = g.coverUrl;
+              img.alt = "";
+              img.loading = "lazy";
+              a.append(img);
+            }
+            const info = document.createElement("span");
+            const title = document.createElement("strong");
+            title.textContent = g.title;
+            const meta = document.createElement("span");
+            meta.textContent = [g.userEntries[0]?.platformName, hours ? `${Math.round(hours)}h played` : ""]
+              .filter(Boolean)
+              .join(" · ");
+            info.append(title, meta);
+            a.append(info);
+            list.append(a);
+          }
+          document.getElementById("now-playing").hidden = false;
+        })
+        .catch(() => {});
+    </script>
   </body>
 </html>
