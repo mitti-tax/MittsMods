@@ -1,5 +1,3 @@
-// src/components/LoginModal.tsx
-
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import SheetHeader from "./SheetHeader";
@@ -16,95 +14,71 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [loading, setLoading] = useState(false);
   useEscape(onClose);
 
-  const handleSubmit = async () => {
-    if (!password.trim()) return;
+  const submit = async () => {
+    if (!password.trim() || loading) return;
     setLoading(true);
     setError("");
-    const result = await login(password);
-    setLoading(false);
-    if (result.success) {
-      onSuccess();
-      onClose();
-    } else {
-      setError(result.message ?? "Incorrect password.");
+    try {
+      const result = await login(password);
+      if (result.success) {
+        onSuccess();
+        onClose();
+        return;
+      }
+      setError(result.message ?? "That password isn't right.");
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
     }
-  };
-
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSubmit();
+    setLoading(false);
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: "380px" }}
+      <form
+        className="modal modal-narrow"
+        role="dialog"
+        aria-label="Admin login"
         onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
       >
         <SheetHeader
-          title="Admin Login"
+          title="Admin login"
           onCancel={onClose}
-          confirmLabel={loading ? "Checking…" : "Log In"}
-          onConfirm={handleSubmit}
+          confirmLabel={loading ? "Checking…" : "Log in"}
+          onConfirm={submit}
           confirmDisabled={loading || !password.trim()}
         />
         <div className="modal-body">
-          <p
-            style={{
-              fontSize: "0.8125rem",
-              color: "var(--text-muted)",
-              marginBottom: "20px",
-            }}
-          >
-            Enter the admin password to edit your game library.
-          </p>
-
-          <div className="form-group">
-            <label className="form-label">Password</label>
+          <p className="muted">Log in to add games, edit your log and sync Steam.</p>
+          <div className="field">
+            <label className="field-label" htmlFor="f-password">
+              Password
+            </label>
             <input
-              className="form-input"
+              id="f-password"
+              className="input"
               type="password"
               autoComplete="current-password"
               enterKeyHint="go"
-              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handleKey}
               autoFocus
             />
           </div>
-
-          {error && (
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--red)",
-                fontFamily: "var(--font-mono)",
-                marginBottom: "12px",
-                padding: "8px 10px",
-                background: "rgba(224,85,85,0.08)",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(224,85,85,0.2)",
-              }}
-            >
-              {error}
-            </div>
-          )}
-
+          {error && <p className="form-error">{error}</p>}
           <div className="btn-row">
-            <button className="btn btn-ghost" onClick={onClose}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={loading || !password.trim()}
-            >
-              {loading ? "Checking..." : "Log In"}
+            <button type="submit" className="btn btn-primary" disabled={loading || !password.trim()}>
+              {loading ? "Checking…" : "Log in"}
             </button>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

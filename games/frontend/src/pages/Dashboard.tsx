@@ -1,205 +1,131 @@
 import { useEffect, useState } from "react";
-import { api, type Game } from "../api/client";
+import type { Game } from "../api/client";
+import Shelf from "../components/Shelf";
+import { STATUS_LABEL, entryOf, fmtHours, sortGames, totalHours, type LibraryFilter } from "../lib/games";
 
 interface Props {
-  onNavigate: (page: "dashboard" | "games" | "backlog") => void;
-  isLoggedIn: boolean;
+  games: Game[];
+  onOpen: (g: Game) => void;
+  onSeeAll: (f: Partial<LibraryFilter>) => void;
 }
 
-export default function Dashboard({ onNavigate }: Props) {
-  const [games, setGames] = useState<Game[]>([]);
+const SHELF_SIZE = 12;
+
+export default function Dashboard({ games, onOpen, onSeeAll }: Props) {
   const [slide, setSlide] = useState(0);
 
-  useEffect(() => {
-    api.getGames().then(setGames).catch(console.error);
-  }, []);
-
-  const slideshowGames = games
-    .filter(
-      (g) =>
-        g.coverUrl &&
-        g.userEntries.some((e) => e.hoursPlayed && e.hoursPlayed > 0),
-    )
-    .sort((a, b) => {
-      const aDate = new Date(a.userEntries[0]?.updatedAt ?? 0).getTime();
-      const bDate = new Date(b.userEntries[0]?.updatedAt ?? 0).getTime();
-      return bDate - aDate;
-    })
-    .slice(0, 8);
+  // Recently played: games with art and play time, newest activity first
+  const slideshowGames = sortGames(
+    games.filter((g) => g.coverUrl && totalHours(g) > 0),
+    "recent",
+  ).slice(0, 8);
+  const count = slideshowGames.length;
+  const active = count ? slide % count : 0; // stays valid if the list shrinks
 
   useEffect(() => {
-    // No auto-advance under Reduce Motion
-    if (
-      slideshowGames.length < 2 ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return;
-    const timer = setInterval(
-      () => setSlide((s) => (s + 1) % slideshowGames.length),
-      4000,
-    );
+    if (count < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => setSlide((s) => (s + 1) % count), 5000);
     return () => clearInterval(timer);
-  }, [slideshowGames.length]);
-  const totalGames = games.length;
-  const completed = games.filter((g) =>
-    g.userEntries.some((e) => e.status === "Completed"),
-  ).length;
-  const playing = games.filter((g) =>
-    g.userEntries.some((e) => e.status === "Playing"),
-  ).length;
-  const totalHours = games.reduce(
-    (sum, g) =>
-      sum + g.userEntries.reduce((s, e) => s + (e.hoursPlayed ?? 0), 0),
-    0,
+  }, [count]);
+
+  const playing = sortGames(
+    games.filter((g) => g.userEntries.some((e) => e.status === "Playing")),
+    "recent",
   );
+  const favourites = sortGames(
+    games.filter((g) => g.isFavourite),
+    "rating",
+  );
+  const added = sortGames(games, "added");
+  const topRated = sortGames(
+    games.filter((g) => (entryOf(g)?.rating ?? 0) >= 8),
+    "rating",
+  );
+
+  const consoles = new Set(games.flatMap((g) => g.userEntries.map((e) => e.platformId))).size;
+  const hours = Math.round(games.reduce((s, g) => s + totalHours(g), 0));
+  const finished = games.filter((g) => g.userEntries.some((e) => e.status === "Completed")).length;
+  const n = (v: number) => <strong>{v.toLocaleString()}</strong>;
 
   return (
     <>
-      {/* Slideshow */}
-      <div className="hero-slideshow">
-        {slideshowGames.length === 0 ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-            }}
-          >
-            <div className="empty-state">
-              <p>NO GAMES LOGGED YET</p>
-              <p style={{ fontSize: "0.6875rem", marginTop: "8px" }}>
-                Log in and use Sync Steam to import your library
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {slideshowGames.map((g, i) => (
-              <div
+      {count > 0 && (
+        <section className="hero" aria-label="Recently played">
+          {slideshowGames.map((g, i) => {
+            const e = entryOf(g);
+            return (
+              <button
                 key={g.id}
-                className={`slide ${i === slide ? "active" : ""}`}
+                className={`slide ${i === active ? "active" : ""}`}
+                inert={i !== active}
+                onClick={() => onOpen(g)}
               >
                 <img src={g.coverUrl!} className="slide-bg" alt="" />
-                <img src={g.coverUrl!} className="slide-cover" alt={g.title} />
-                <div className="slide-info">
-                  <div className="slide-title">{g.title}</div>
-                  <div className="slide-meta">
+                <img src={g.coverUrl!} className="slide-cover" alt="" />
+                <span className="slide-info">
+                  <span className="slide-kicker">Recently played</span>
+                  <span className="slide-title">{g.title}</span>
+                  <span className="slide-meta">
+                    {e && <span className={`status status-${e.status}`}>{STATUS_LABEL[e.status]}</span>}
+                    {e?.hoursPlayed ? <span>{fmtHours(e.hoursPlayed)} played</span> : null}
                     {g.releaseYear && <span>{g.releaseYear}</span>}
-                    {g.userEntries[0] && (
-                      <span className="slide-status">
-                        {g.userEntries[0].status.toUpperCase()}
-                      </span>
-                    )}
-                    {!!g.userEntries[0]?.hoursPlayed && (
-                      <span>{g.userEntries[0].hoursPlayed}h played</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+          {count > 1 && (
             <div className="slide-dots">
-              {slideshowGames.map((_, i) => (
+              {slideshowGames.map((g, i) => (
                 <button
-                  key={i}
-                  className={`slide-dot ${i === slide ? "active" : ""}`}
+                  key={g.id}
+                  className={`slide-dot ${i === active ? "active" : ""}`}
                   onClick={() => setSlide(i)}
-                  aria-label={`Show slide ${i + 1}`}
+                  aria-label={`Show ${g.title}`}
+                  aria-current={i === active}
                 />
               ))}
             </div>
-          </>
-        )}
-      </div>
-
-      {/* Stats bar */}
-      <div className="stats-bar">
-        <div className="stat-cell">
-          <div className="stat-value">{totalGames}</div>
-          <div className="stat-label">Total Games</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{Math.round(totalHours)}</div>
-          <div className="stat-label">Hours Played</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{completed}</div>
-          <div className="stat-label">Completed</div>
-        </div>
-        <div className="stat-cell">
-          <div className="stat-value">{playing}</div>
-          <div className="stat-label">Playing Now</div>
-        </div>
-      </div>
-
-      {playing > 0 && (
-        <div className="section">
-          <div className="section-header">
-            <span className="section-title">Currently Playing</span>
-            <button
-              className="btn btn-ghost"
-              onClick={() => onNavigate("games")}
-            >
-              All Games →
-            </button>
-          </div>
-          <div className="games-grid">
-            {games
-              .filter((g) => g.userEntries.some((e) => e.status === "Playing"))
-              .slice(0, 6)
-              .map((g) => (
-                <GameCard key={g.id} game={g} />
-              ))}
-          </div>
-        </div>
+          )}
+        </section>
       )}
 
-      <div className="section">
-        <div className="section-header">
-          <span className="section-title">Recently Added</span>
-          <button className="btn btn-ghost" onClick={() => onNavigate("games")}>
-            View all →
-          </button>
-        </div>
-        <div className="games-grid">
-          {[...games]
-            .sort(
-              (a, b) =>
-                new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-            )
-            .slice(0, 12)
-            .map((g) => (
-              <GameCard key={g.id} game={g} />
-            ))}
-        </div>
-      </div>
+      <p className="tally">
+        {n(games.length)} {games.length === 1 ? "game" : "games"} across {n(consoles)}{" "}
+        {consoles === 1 ? "console" : "consoles"}, {n(hours)} hours logged and {n(finished)} finished
+        {playing.length > 0 && <>, with {n(playing.length)} on the go right now</>}.
+      </p>
+
+      {playing.length > 0 && (
+        <Shelf
+          title="Now playing"
+          games={playing.slice(0, SHELF_SIZE)}
+          onOpen={onOpen}
+          onSeeAll={() => onSeeAll({ status: "Playing" })}
+        />
+      )}
+      {favourites.length > 0 && (
+        <Shelf
+          title="Favourites"
+          games={favourites.slice(0, SHELF_SIZE)}
+          onOpen={onOpen}
+          onSeeAll={() => onSeeAll({ status: "Favourites" })}
+        />
+      )}
+      <Shelf
+        title="Recently added"
+        games={added.slice(0, SHELF_SIZE)}
+        onOpen={onOpen}
+        onSeeAll={() => onSeeAll({ sort: "added" })}
+      />
+      {topRated.length > 0 && (
+        <Shelf
+          title="Rated 8 and up"
+          games={topRated.slice(0, SHELF_SIZE)}
+          onOpen={onOpen}
+          onSeeAll={() => onSeeAll({ sort: "rating" })}
+        />
+      )}
     </>
-  );
-}
-
-function GameCard({ game }: { game: Game }) {
-  const entry = game.userEntries[0];
-  return (
-    <div className="game-card">
-      {game.coverUrl ? (
-        <img src={game.coverUrl} className="game-card-cover" alt={game.title} />
-      ) : (
-        <div className="game-card-cover-placeholder">🎮</div>
-      )}
-      <div className="game-card-body">
-        <div className="game-card-title">{game.title}</div>
-        {entry && (
-          <div className="game-card-meta">
-            <span className={`status-badge status-${entry.status}`}>
-              {entry.status}
-            </span>
-            {entry.hoursPlayed ? (
-              <span className="game-card-hours">{entry.hoursPlayed}h</span>
-            ) : null}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }

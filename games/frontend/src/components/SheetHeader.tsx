@@ -15,18 +15,19 @@ export default function SheetHeader({
 }) {
   return (
     <div className="modal-header">
-      <button className="sheet-action" onClick={onCancel}>
+      <button type="button" className="sheet-action" onClick={onCancel}>
         Cancel
       </button>
       <span className="modal-title">{title}</span>
       <button
+        type="button"
         className="sheet-action confirm"
         onClick={onConfirm}
         disabled={confirmDisabled}
       >
         {confirmLabel}
       </button>
-      <button className="modal-close" onClick={onCancel} aria-label="Close">
+      <button type="button" className="modal-close" onClick={onCancel} aria-label="Close">
         ✕
       </button>
     </div>

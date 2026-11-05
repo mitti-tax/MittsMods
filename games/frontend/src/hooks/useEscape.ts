@@ -1,12 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-// Calls onEscape when Escape is pressed — used to close modals from the keyboard
+// Escape closes only the topmost open sheet, not every sheet in the stack
+const stack: { current: () => void }[] = [];
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && stack.length) stack[stack.length - 1].current();
+});
+
 export function useEscape(onEscape: () => void) {
+  const ref = useRef(onEscape);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onEscape();
+    ref.current = onEscape;
+  });
+  useEffect(() => {
+    stack.push(ref);
+    return () => {
+      stack.splice(stack.indexOf(ref), 1);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onEscape]);
+  }, []);
 }
