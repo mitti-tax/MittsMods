@@ -1,5 +1,3 @@
-// src/components/LoginModal.tsx
-
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import SheetHeader from "./SheetHeader";
@@ -16,7 +14,8 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [loading, setLoading] = useState(false);
   useEscape(onClose);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!password.trim() || loading) return;
     setLoading(true);
     setError("");
@@ -34,17 +33,9 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
     setLoading(false);
   };
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSubmit();
-  };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: "380px" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal modal-narrow" role="dialog" aria-label="Admin Login" onClick={(e) => e.stopPropagation()}>
         <SheetHeader
           title="Admin Login"
           onCancel={onClose}
@@ -52,20 +43,18 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
           onConfirm={handleSubmit}
           confirmDisabled={loading || !password.trim()}
         />
-        <div className="modal-body">
-          <p
-            style={{
-              fontSize: "0.8125rem",
-              color: "var(--text-muted)",
-              marginBottom: "20px",
-            }}
-          >
-            Enter the admin password to edit your game library.
-          </p>
-
+        {/* A real form, so iOS Passwords and password managers offer to fill and save it */}
+        <form className="modal-body" onSubmit={handleSubmit}>
+          <p className="modal-intro">Enter the admin password to edit your game library.</p>
+          {/* Password managers want a username field; this one is fixed and hidden */}
+          <input type="text" name="username" autoComplete="username" value="admin" readOnly hidden />
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label" htmlFor="f-password">
+              Password
+            </label>
             <input
+              id="f-password"
+              name="password"
               className="form-input"
               type="password"
               autoComplete="current-password"
@@ -73,41 +62,23 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handleKey}
               autoFocus
             />
           </div>
-
           {error && (
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--red)",
-                fontFamily: "var(--font-mono)",
-                marginBottom: "12px",
-                padding: "8px 10px",
-                background: "rgba(224,85,85,0.08)",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid rgba(224,85,85,0.2)",
-              }}
-            >
+            <p className="form-error" role="alert">
               {error}
-            </div>
+            </p>
           )}
-
           <div className="btn-row">
-            <button className="btn btn-ghost" onClick={onClose}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={loading || !password.trim()}
-            >
+            <button type="submit" className="btn btn-primary" disabled={loading || !password.trim()}>
               {loading ? "Checking..." : "Log In"}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -1,9 +1,20 @@
 // Loading, error and empty states shared by every page
 
+// Placeholder cards in the shape of the library, so the page doesn't jump when it arrives
 export function LoadingState() {
   return (
-    <div className="loading" role="status">
-      LOADING LIBRARY...
+    <div className="section" role="status" aria-label="Loading library">
+      <div className="games-grid">
+        {Array.from({ length: 12 }, (_, i) => (
+          <div key={i} className="game-card skeleton">
+            <div className="game-card-cover-placeholder" />
+            <div className="game-card-body">
+              <div className="skeleton-line" />
+              <div className="skeleton-line short" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

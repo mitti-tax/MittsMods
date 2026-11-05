@@ -1,60 +1,89 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Game, type PlayStatus } from "./api/client";
+import { api, type Game } from "./api/client";
 import AddGameSheet from "./components/AddGameSheet";
 import GameSheet from "./components/GameSheet";
 import LoginModal from "./components/LoginModal";
+import PickSheet from "./components/PickSheet";
 import { EmptyLibrary, ErrorState, LoadingState } from "./components/States";
 import { useAuth } from "./hooks/useAuth";
 import { useEscape } from "./hooks/useEscape";
 import { useLibrary } from "./hooks/useLibrary";
-import { DEFAULT_FILTER, entryOf, type LibraryFilter } from "./lib/games";
+import { DEFAULT_FILTER, filterFromParams, filterToParams, toCsv, type LibraryFilter } from "./lib/games";
 import Dashboard from "./pages/Dashboard";
 import GamesPage from "./pages/GamesPage";
+import Stats from "./pages/Stats";
 import "./index.css";
 
-type Page = "dashboard" | "games" | "backlog";
+type Page = "dashboard" | "games" | "backlog" | "stats";
 
 const PAGE_TITLES: Record<Page, string> = {
   dashboard: "GameLog",
   games: "All Games",
   backlog: "Backlog",
+  stats: "Stats",
 };
 
 const TABS: { page: Page; label: string; icon: string }[] = [
   { page: "dashboard", label: "Home", icon: "M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" },
   { page: "games", label: "Games", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
   { page: "backlog", label: "Backlog", icon: "M6 3h12v18l-6-4-6 4z" },
+  { page: "stats", label: "Stats", icon: "M4 20V10h4v10zM10 20V4h4v16zM16 20v-7h4v7z" },
 ];
 
-// The page lives in the URL hash so refresh and the back button work
-const pageFromHash = (): Page => {
-  const h = window.location.hash.replace("#/", "");
-  return h in PAGE_TITLES ? (h as Page) : "dashboard";
+const BASE_FILTER: Partial<Record<Page, LibraryFilter>> = {
+  games: DEFAULT_FILTER,
+  backlog: { ...DEFAULT_FILTER, status: "Backlog" },
 };
 
-const BACKLOG_FILTER: LibraryFilter = { ...DEFAULT_FILTER, status: "Backlog" };
+// Everything lives in the URL hash (#/games?status=Completed&game=12): refresh, Back and links work
+interface Route {
+  page: Page;
+  params: URLSearchParams;
+}
+const parseRoute = (): Route => {
+  const [p, q = ""] = window.location.hash.replace(/^#\/?/, "").split("?");
+  return { page: p in PAGE_TITLES ? (p as Page) : "dashboard", params: new URLSearchParams(q) };
+};
+// String(params), not params.size: .size is missing before Safari 17 (iOS 16)
+const hashOf = (r: Route) => {
+  const q = String(r.params);
+  return `#/${r.page}${q ? `?${q}` : ""}`;
+};
+const without = (p: URLSearchParams, key: string) => {
+  const next = new URLSearchParams(p);
+  next.delete(key);
+  return next;
+};
+
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: name });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function App() {
-  const [page, setPage] = useState<Page>(pageFromHash);
-  const [gamesFilter, setGamesFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
-  const [backlogFilter, setBacklogFilter] = useState<LibraryFilter>(BACKLOG_FILTER);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [route, setRoute] = useState<Route>(parseRoute);
   const [showAdd, setShowAdd] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
+  const [showPick, setShowPick] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error"; id: number } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error"; id: number; undo?: () => void } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // One toast at a time; a new one restarts the timer instead of being cut short
-  const notify = useCallback((msg: string, ok = true) => {
+  const notify = useCallback((msg: string, ok = true, undo?: () => void) => {
     clearTimeout(toastTimer.current);
-    setToast({ msg, type: ok ? "success" : "error", id: Date.now() });
-    toastTimer.current = setTimeout(() => setToast(null), ok ? 3000 : 5000);
+    setToast({ msg, type: ok ? "success" : "error", id: Date.now(), undo });
+    toastTimer.current = setTimeout(() => setToast(null), undo ? 6000 : ok ? 3000 : 5000);
   }, []);
 
   const { isLoggedIn, login, logout } = useAuth();
   const lib = useLibrary(notify);
+  const page = route.page;
+  const openId = Number(route.params.get("game")) || null;
   const open = lib.games.find((g) => g.id === openId); // always the latest copy
 
   // iOS large title: nav bar shows the small title once the large one scrolls away
@@ -65,20 +94,48 @@ function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Back/forward and hand-edited hashes
   useEffect(() => {
-    const onHash = () => setPage(pageFromHash());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
+    const sync = () => setRoute(parseRoute());
+    window.addEventListener("popstate", sync);
+    window.addEventListener("hashchange", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("hashchange", sync);
+    };
   }, []);
 
-  const navigate = (p: Page) => {
-    if (p !== page) window.location.hash = `/${p}`;
+  // Each tab remembers its filters, like an iOS tab bar keeps each tab's state
+  const memory = useRef<Partial<Record<Page, URLSearchParams>>>({});
+  useEffect(() => {
+    memory.current[route.page] = without(route.params, "game");
+  }, [route]);
+
+  const go = (r: Route, how: "push" | "replace", state: unknown = null) => {
+    window.history[how === "push" ? "pushState" : "replaceState"](state, "", hashOf(r));
+    setRoute(r);
+  };
+
+  const navigate = (p: Page, params?: URLSearchParams) => {
+    if (p !== page || params) go({ page: p, params: params ?? memory.current[p] ?? new URLSearchParams() }, "push");
     window.scrollTo(0, 0);
   };
 
-  const seeAll = (f: Partial<LibraryFilter>) => {
-    setGamesFilter({ ...DEFAULT_FILTER, ...f });
-    navigate("games");
+  const base = BASE_FILTER[page];
+  const filter = base && filterFromParams(route.params, base);
+  const setFilter = (f: LibraryFilter) => go({ page, params: filterToParams(f, base!) }, "replace");
+
+  const seeAll = (f: Partial<LibraryFilter>) => navigate("games", filterToParams({ ...DEFAULT_FILTER, ...f }, DEFAULT_FILTER));
+
+  // Opening a game adds a history entry, so Back (or the iOS edge swipe) closes it
+  const openGame = (g: Game) => {
+    const params = new URLSearchParams(route.params);
+    params.set("game", String(g.id));
+    go({ page, params }, "push", { sheet: true });
+  };
+  const closeGame = () => {
+    if ((window.history.state as { sheet?: boolean } | null)?.sheet) window.history.back();
+    else go({ page, params: without(route.params, "game") }, "replace");
   };
 
   const handleSync = async () => {
@@ -86,7 +143,7 @@ function App() {
     setSyncing(true);
     try {
       const result = await api.syncSteam();
-      notify(`Synced — ${result.added} added, ${result.updated} updated`);
+      notify(`Synced: ${result.added} added, ${result.updated} updated`);
       lib.load();
     } catch (e) {
       const running = e instanceof Error && e.message.startsWith("API error 409");
@@ -96,12 +153,75 @@ function App() {
     }
   };
 
-  const quickStatus = (g: Game, status: PlayStatus) => {
-    const e = entryOf(g);
-    if (e) lib.update(g, e, { status }, true);
+  const exportLibrary = (kind: "csv" | "json") => {
+    const day = new Date().toISOString().slice(0, 10);
+    // The byte-order mark tells Excel the file is UTF-8 (otherwise "Pokémon" shows as "PokÃ©mon")
+    if (kind === "csv") download(`gamelog-${day}.csv`, "﻿" + toCsv(lib.games), "text/csv;charset=utf-8");
+    else download(`gamelog-${day}.json`, JSON.stringify(lib.games, null, 2), "application/json");
   };
 
-  const openGame = (g: Game) => setOpenId(g.id);
+  // Keyboard shortcuts (desktop): / search, n add, g then h/g/b/s to switch pages, ? help
+  const keys = useRef<(e: KeyboardEvent) => void>(() => {});
+  const gAt = useRef(0); // when "g" was pressed; the second key must follow within a second
+  useEffect(() => {
+    keys.current = (e) => {
+      const target = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || target.closest("input, textarea, select, [contenteditable]")) return;
+      if (document.querySelector(".modal-overlay")) return;
+      if (Date.now() - gAt.current < 1000) {
+        gAt.current = 0;
+        const p = ({ h: "dashboard", g: "games", b: "backlog", s: "stats" } as Record<string, Page>)[e.key];
+        if (p) return navigate(p);
+      }
+      if (e.key === "g") gAt.current = Date.now();
+      else if (e.key === "/") {
+        e.preventDefault();
+        if (!BASE_FILTER[page]) navigate("games");
+        setTimeout(() => searchRef.current?.focus());
+      } else if (e.key === "n" && isLoggedIn) setShowAdd(true);
+      else if (e.key === "?") notify("Shortcuts: / search · n add a game · g then h, g, b or s to switch pages");
+    };
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => keys.current(e);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Pull to refresh on touch screens
+  const [pull, setPull] = useState(0);
+  const refresh = useRef(lib.load);
+  useEffect(() => {
+    refresh.current = lib.load;
+  });
+  useEffect(() => {
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    let startY: number | null = null;
+    let dist = 0;
+    const start = (e: TouchEvent) => {
+      const atTop = window.scrollY <= 0 && !document.querySelector(".modal-overlay");
+      startY = atTop ? e.touches[0].clientY : null;
+      dist = 0;
+    };
+    const move = (e: TouchEvent) => {
+      if (startY === null) return;
+      dist = Math.max(0, e.touches[0].clientY - startY) / 2;
+      setPull(Math.min(dist, 80));
+    };
+    const end = () => {
+      if (startY !== null && dist >= 60) refresh.current();
+      startY = null;
+      setPull(0);
+    };
+    window.addEventListener("touchstart", start, { passive: true });
+    window.addEventListener("touchmove", move, { passive: true });
+    window.addEventListener("touchend", end);
+    return () => {
+      window.removeEventListener("touchstart", start);
+      window.removeEventListener("touchmove", move);
+      window.removeEventListener("touchend", end);
+    };
+  }, []);
 
   let content;
   if (lib.state === "loading") content = <LoadingState />;
@@ -109,23 +229,27 @@ function App() {
   else if (lib.games.length === 0)
     content = <EmptyLibrary isLoggedIn={isLoggedIn} onAdd={() => setShowAdd(true)} onSync={handleSync} />;
   else if (page === "dashboard") content = <Dashboard games={lib.games} onOpen={openGame} onSeeAll={seeAll} />;
-  else {
-    const backlog = page === "backlog";
+  else if (page === "stats") content = <Stats games={lib.games} onOpen={openGame} onSeeAll={seeAll} />;
+  else
     content = (
       <GamesPage
         key={page}
         games={lib.games}
         platforms={lib.platforms}
-        filter={backlog ? backlogFilter : gamesFilter}
-        onFilter={backlog ? setBacklogFilter : setGamesFilter}
+        filter={filter!}
+        base={base!}
+        onFilter={setFilter}
         isLoggedIn={isLoggedIn}
+        lib={lib}
+        searchRef={searchRef}
         onOpen={openGame}
         onAdd={() => setShowAdd(true)}
+        onPick={page === "backlog" ? () => setShowPick(true) : undefined}
         onLoginRequest={() => setShowLogin(true)}
-        onQuickStatus={quickStatus}
       />
     );
-  }
+
+  const backlogPool = lib.games.filter((g) => !g.isHidden && g.userEntries.some((e) => e.status === "Backlog"));
 
   return (
     <div className="app">
@@ -151,6 +275,9 @@ function App() {
           <button className={`nav-item ${page === "backlog" ? "active" : ""}`} onClick={() => navigate("backlog")}>
             <span className="nav-icon">◎</span> Backlog
           </button>
+          <button className={`nav-item ${page === "stats" ? "active" : ""}`} onClick={() => navigate("stats")}>
+            <span className="nav-icon">▥</span> Stats
+          </button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -159,8 +286,17 @@ function App() {
               {syncing ? "SYNCING..." : "⟳ SYNC STEAM"}
             </button>
           )}
+          <button className="nav-item sidebar-link" onClick={() => exportLibrary("csv")}>
+            <span className="nav-icon">⤓</span> Export CSV
+          </button>
           {isLoggedIn ? (
-            <button className="nav-item sidebar-link" onClick={logout}>
+            <button
+              className="nav-item sidebar-link"
+              onClick={() => {
+                logout();
+                lib.load();
+              }}
+            >
               <span className="nav-icon">⏻</span> Log Out
             </button>
           ) : (
@@ -171,11 +307,17 @@ function App() {
           <a href="/" className="nav-item sidebar-link">
             <span className="nav-icon">←</span> MittsMods
           </a>
+          <span className="sidebar-hint">Press ? for shortcuts</span>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="main">
+        <div className="ptr" style={{ height: lib.refreshing ? 44 : pull }} aria-hidden={!lib.refreshing}>
+          <span className={lib.refreshing ? "spinning" : ""} style={{ transform: `rotate(${pull * 4}deg)`, opacity: lib.refreshing ? 1 : pull / 60 }}>
+            ⟳
+          </span>
+        </div>
         <h1 className="large-title">{PAGE_TITLES[page]}</h1>
         {content}
       </main>
@@ -209,17 +351,24 @@ function App() {
           game={open}
           platforms={lib.platforms}
           isLoggedIn={isLoggedIn}
-          onClose={() => setOpenId(null)}
-          onSave={lib.update}
-          onDelete={lib.remove}
-          onToggleFavourite={lib.toggleFavourite}
+          lib={lib}
+          notify={notify}
+          onClose={closeGame}
           onLoginRequest={() => setShowLogin(true)}
         />
       )}
 
       {showAdd && isLoggedIn && (
-        <AddGameSheet platforms={lib.platforms} onAdd={lib.add} onClose={() => setShowAdd(false)} />
+        <AddGameSheet
+          games={lib.games}
+          platforms={lib.platforms}
+          onAdd={lib.add}
+          onOpen={openGame}
+          onClose={() => setShowAdd(false)}
+        />
       )}
+
+      {showPick && <PickSheet pool={backlogPool} onOpen={openGame} onClose={() => setShowPick(false)} />}
 
       {showAccount && (
         <AccountSheet
@@ -230,6 +379,10 @@ function App() {
             setShowAccount(false);
             handleSync();
           }}
+          onExport={(kind) => {
+            setShowAccount(false);
+            exportLibrary(kind);
+          }}
           onLogin={() => {
             setShowAccount(false);
             setShowLogin(true);
@@ -237,6 +390,7 @@ function App() {
           onLogout={() => {
             setShowAccount(false);
             logout();
+            lib.load();
           }}
         />
       )}
@@ -244,14 +398,28 @@ function App() {
       {showLogin && (
         <LoginModal
           onClose={() => setShowLogin(false)}
-          onSuccess={() => notify("Logged in as admin")}
+          onSuccess={() => {
+            notify("Logged in as admin");
+            lib.load(); // the admin also sees hidden games
+          }}
           login={login}
         />
       )}
 
       {toast && (
         <div key={toast.id} className={`toast ${toast.type}`} role="status">
-          {toast.msg}
+          <span>{toast.msg}</span>
+          {toast.undo && (
+            <button
+              className="toast-undo"
+              onClick={() => {
+                toast.undo!();
+                setToast(null);
+              }}
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -264,6 +432,7 @@ function AccountSheet({
   syncing,
   onClose,
   onSync,
+  onExport,
   onLogin,
   onLogout,
 }: {
@@ -271,6 +440,7 @@ function AccountSheet({
   syncing: boolean;
   onClose: () => void;
   onSync: () => void;
+  onExport: (kind: "csv" | "json") => void;
   onLogin: () => void;
   onLogout: () => void;
 }) {
@@ -284,6 +454,12 @@ function AccountSheet({
               {syncing ? "Syncing…" : "Sync Steam Library"}
             </button>
           )}
+          <button className="action" onClick={() => onExport("csv")}>
+            Export as Spreadsheet (CSV)
+          </button>
+          <button className="action" onClick={() => onExport("json")}>
+            Export as JSON
+          </button>
           {isLoggedIn ? (
             <button className="action destructive" onClick={onLogout}>
               Log Out

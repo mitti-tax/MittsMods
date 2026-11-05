@@ -122,7 +122,35 @@ export default function EntryFields({
         </div>
       </div>
 
-      {/* Right under the numbers it's about, so it's never off screen */}
+      {/* Filled in automatically when the status becomes Playing or Completed */}
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-started">
+            Started
+          </label>
+          <input
+            id="f-started"
+            className="form-input"
+            type="date"
+            value={draft.started}
+            onChange={(e) => set({ started: e.target.value })}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-completed">
+            Finished
+          </label>
+          <input
+            id="f-completed"
+            className="form-input"
+            type="date"
+            value={draft.completed}
+            onChange={(e) => set({ completed: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/* Right under the fields it's about, so it's never off screen */}
       {error && (
         <p className="form-error" role="alert">
           {error}

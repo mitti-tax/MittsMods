@@ -1,20 +1,25 @@
 import type { Game, PlayStatus } from "../api/client";
 import { STATUSES, STATUS_LABEL, entryOf, fmtHours } from "../lib/games";
+import Cover from "./Cover";
 
 export default function GameCard({
   game,
   onOpen,
   onStatus,
+  selected,
 }: {
   game: Game;
-  onOpen: (g: Game) => void;
+  onOpen: (g: Game) => void; // in edit mode this toggles selection
   onStatus?: (g: Game, s: PlayStatus) => void; // set = edit mode
+  selected?: boolean;
 }) {
   const entry = entryOf(game);
+  const selecting = selected !== undefined;
   return (
     <div
-      className="game-card"
-      role="button"
+      className={`game-card ${selected ? "selected" : ""} ${game.isHidden ? "is-hidden" : ""}`}
+      role={selecting ? "checkbox" : "button"}
+      aria-checked={selecting ? selected : undefined}
       tabIndex={0}
       aria-label={game.title}
       onClick={() => onOpen(game)}
@@ -26,12 +31,9 @@ export default function GameCard({
         }
       }}
     >
-      {game.coverUrl ? (
-        <img src={game.coverUrl} className="game-card-cover" alt="" loading="lazy" decoding="async" />
-      ) : (
-        <div className="game-card-cover-placeholder">🎮</div>
-      )}
-      {game.isFavourite && (
+      <Cover src={game.coverUrl} className="game-card-cover" />
+      {selecting && <span className="select-mark" aria-hidden="true">{selected ? "✓" : ""}</span>}
+      {game.isFavourite && !selecting && (
         <span className="fav-star" role="img" aria-label="Favourite">
           ★
         </span>

@@ -1138,6 +1138,514 @@ body:has(.modal-overlay) {
 }
 
 /* ================================================
+   FEATURES — bulk edit, list view, stats, ratings
+   ================================================ */
+
+/* Covers that failed to load, or never had a URL */
+.cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-size: 2rem;
+}
+
+/* Loading placeholders in the shape of the grid */
+.skeleton {
+  pointer-events: none;
+}
+.skeleton .game-card-cover-placeholder,
+.skeleton-line {
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+.skeleton-line {
+  height: 10px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.skeleton-line.short {
+  width: 45%;
+  margin-bottom: 0;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-narrow {
+  max-width: 380px;
+}
+.modal-intro {
+  margin-bottom: 20px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.status-Wishlist {
+  background: rgba(224, 154, 58, 0.15);
+  color: var(--orange);
+}
+
+/* Bulk selection */
+.game-card.selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+.game-card.is-hidden .game-card-cover {
+  opacity: 0.45;
+}
+.select-mark {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+  background: rgba(13, 13, 15, 0.7);
+  color: #fff;
+  font-size: 0.75rem;
+}
+.game-card .select-mark {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+.selected .select-mark {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.bulk-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 12px;
+  background: rgba(28, 28, 33, 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--blue-dim);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.bulk-count {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--blue-bright);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bulk-bar .form-select {
+  width: auto;
+}
+.btn:disabled,
+.form-select:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Toolbar extras: filters toggle and grid/list switch */
+.library-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+.more-filters {
+  grid-template-columns: repeat(3, minmax(0, 200px));
+}
+.toolbar-buttons {
+  display: flex;
+  gap: 8px;
+}
+.btn.active {
+  color: var(--blue-bright);
+  border-color: var(--blue-dim);
+}
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.view-toggle button {
+  min-width: 38px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+.view-toggle button + button {
+  border-left: 1px solid var(--border);
+}
+.view-toggle button.active {
+  background: var(--blue-dim);
+  color: var(--blue-bright);
+}
+
+/* List view */
+.game-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.game-table th {
+  padding: 0 10px 8px;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 400;
+  color: var(--text-faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.game-table th button {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.game-table th button.active,
+.game-table th button:hover {
+  color: var(--blue-bright);
+}
+.game-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+.game-table tbody tr {
+  cursor: pointer;
+}
+.game-table tbody tr:hover,
+.game-table tbody tr.selected {
+  background: var(--surface);
+}
+.game-table .col-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.row-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.row-cover {
+  width: 32px;
+  height: 43px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 2px;
+  font-size: 0.875rem;
+}
+.row-name {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+}
+.row-fav {
+  color: var(--yellow);
+}
+.row-sub {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+}
+
+/* Game sheet extras */
+.segmented {
+  display: flex;
+  margin-bottom: 16px;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.segmented button {
+  flex: 1;
+  min-height: 32px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.segmented button.active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.star-rating {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 16px;
+}
+.star-rating button {
+  width: 28px;
+  height: 32px;
+  background: none;
+  border: 0;
+  color: var(--text-faint);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+.star-rating button.on {
+  color: var(--yellow);
+}
+.star-rating button:disabled {
+  cursor: default;
+}
+.star-value {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.detail-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+.detail-history {
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.detail-history summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+.detail-history ol {
+  list-style: none;
+  margin-top: 8px;
+  border-left: 1px solid var(--border-2);
+}
+.detail-history li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+.btn-block {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.cover-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cover-field-preview {
+  width: 36px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 2px;
+  font-size: 0.875rem;
+}
+
+/* What should I play? */
+.pick {
+  text-align: center;
+}
+.pick-cover {
+  width: 140px;
+  aspect-ratio: 2 / 3;
+  margin: 0 auto 14px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.pick-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+}
+.pick-meta {
+  margin: 4px 0 16px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.pick .btn-row {
+  justify-content: center;
+}
+
+/* Stats */
+.stats-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 30%) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 6px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.bar-row:not(:disabled):hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-track {
+  height: 8px;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  border-radius: 4px;
+}
+/* Status bars take their badge colour */
+.bar-fill[class*="status-"] {
+  background: currentColor;
+}
+.bar-value {
+  min-width: 48px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.rank-list {
+  list-style: none;
+  counter-reset: rank;
+}
+.rank-list li {
+  counter-increment: rank;
+}
+.rank-list button {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 6px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.rank-list button::before {
+  content: counter(rank);
+  min-width: 18px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--blue);
+}
+.rank-list button:hover {
+  background: var(--surface);
+}
+.rank-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-value {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.year-chips {
+  margin-bottom: 14px;
+}
+
+/* Pull to refresh */
+.ptr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--blue-bright);
+  font-size: 1.25rem;
+  transition: height 0.2s;
+}
+.ptr .spinning {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toast with an Undo action */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+/* Keep the toast clear of the bulk-edit bar */
+body:has(.bulk-bar) .toast {
+  bottom: 96px;
+}
+.toast-undo {
+  margin: -6px -8px -6px auto;
+  padding: 6px 8px;
+  background: none;
+  border: 0;
+  color: var(--blue-bright);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.sidebar-hint {
+  display: block;
+  padding-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-faint);
+}
+
+/* ================================================
    MOBILE — iOS-style shell: translucent nav bar,
    bottom tab bar, sheets, safe areas, 44pt targets.
    Applies to phones in portrait (narrow) and landscape (short + touch).
@@ -1344,7 +1852,7 @@ body:has(.modal-overlay) {
     align-items: flex-end;
   }
   .modal {
-    max-width: 100% !important; /* beats the inline 380px desktop width */
+    max-width: 100% !important; /* beats .modal-narrow on desktop */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border-bottom: 0;
     max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
@@ -1530,6 +2038,66 @@ body:has(.modal-overlay) {
   }
 }
 
+/* New features on phones */
+@media (max-width: 768px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .tabbar {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .toolbar-buttons {
+    grid-column: 1 / -1;
+  }
+  .toolbar-buttons > .btn {
+    flex: 1;
+  }
+  .view-toggle button {
+    min-width: 48px;
+    min-height: 44px;
+  }
+  .more-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .more-filters .form-select:last-child {
+    grid-column: 1 / -1;
+  }
+  /* The list keeps title, status and hours; the rest is in the game sheet */
+  .game-table .col-wide {
+    display: none;
+  }
+  .game-table td {
+    padding: 8px 6px;
+  }
+  /* Two rows: count + select all, then status / platform / hide */
+  .bulk-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    bottom: calc(49px + env(safe-area-inset-bottom) + 8px);
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  .bulk-count {
+    grid-column: span 2;
+  }
+  .bulk-bar .form-select {
+    width: 100%;
+  }
+  body:has(.bulk-bar) .toast {
+    bottom: calc(49px + env(safe-area-inset-bottom) + 130px);
+  }
+  .stats-columns {
+    grid-template-columns: 1fr;
+  }
+  .star-rating button {
+    width: 30px;
+    height: 44px;
+  }
+  .segmented button {
+    min-height: 36px;
+  }
+  .sidebar-hint {
+    display: none;
+  }
+}
+
 /* Phones in landscape: compact bars like iOS, wider layouts, centred sheets */
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   /* iOS drops the large title in landscape; the inline title stays in the bar */
@@ -1598,7 +2166,20 @@ body:has(.modal-overlay) {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
   .library-toolbar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+  }
+  .more-filters {
+    grid-template-columns: repeat(3, minmax(0, 200px));
+  }
+  .more-filters .form-select:last-child,
+  .toolbar-buttons {
+    grid-column: auto;
+  }
+  .bulk-bar {
+    bottom: calc(32px + env(safe-area-inset-bottom) + 8px);
+  }
+  body:has(.bulk-bar) .toast {
+    bottom: calc(32px + env(safe-area-inset-bottom) + 130px);
   }
   .library-search {
     grid-column: auto;
@@ -1621,6 +2202,11 @@ body:has(.modal-overlay) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .skeleton .game-card-cover-placeholder,
+  .skeleton-line,
+  .ptr .spinning {
+    animation: none;
+  }
   *,
   *::before,
   *::after {

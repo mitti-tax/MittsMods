@@ -7,7 +7,8 @@ export type PlayStatus =
   | "Playing"
   | "Completed"
   | "Dropped"
-  | "OnHold";
+  | "OnHold"
+  | "Wishlist";
 export type PlayMode = "Handheld" | "TV" | "CRT";
 export type HardwareType = "Original" | "Modded" | "Emulator" | "Cloud";
 
@@ -24,10 +25,12 @@ export interface UserEntry {
   mode: PlayMode | null;
   hardware: HardwareType;
   source: "Manual" | "Steam";
+  lastPlayedAt?: string | null; // from Steam
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  history?: { status: PlayStatus; changedAt: string }[];
 }
 
 export interface Game {
@@ -41,6 +44,8 @@ export interface Game {
   igdbId: number | null;
   steamAppId: number | null;
   isFavourite: boolean;
+  isHidden?: boolean;
+  timeToBeatHours?: number | null;
   createdAt: string;
   userEntries: UserEntry[];
 }
@@ -62,6 +67,35 @@ export interface IgdbResult {
   platforms: string[];
 }
 
+export interface GameDetails {
+  title: string;
+  coverUrl: string | null;
+  genre: string | null;
+  releaseYear: number | null;
+  developer: string | null;
+  summary: string | null;
+  igdbId: number | null;
+}
+
+export interface NewEntryPayload {
+  platformId: number;
+  status: string;
+  hoursPlayed?: number;
+  rating?: number;
+  notes?: string;
+  mode?: string;
+  hardware?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
+export interface BulkPayload {
+  ids: number[];
+  status?: PlayStatus;
+  platformId?: number;
+  hidden?: boolean;
+}
+
 export interface CreateGamePayload {
   title: string;
   coverUrl?: string;
@@ -71,15 +105,7 @@ export interface CreateGamePayload {
   summary?: string;
   igdbId?: number;
   steamAppId?: number;
-  entry: {
-    platformId: number;
-    status: string;
-    hoursPlayed?: number;
-    rating?: number;
-    notes?: string;
-    mode?: string;
-    hardware?: string;
-  };
+  entry: NewEntryPayload;
 }
 
 // Changes to an entry; null clears a field
@@ -136,6 +162,14 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  updateGame: (id: number, d: GameDetails) =>
+    request<Game>(`/api/games/${id}`, { method: "PUT", body: JSON.stringify(d) }),
+  bulk: (p: BulkPayload) =>
+    request<Game[]>("/api/games/bulk", { method: "PATCH", body: JSON.stringify(p) }),
+  addEntry: (gId: number, p: NewEntryPayload) =>
+    request<Game>(`/api/games/${gId}/entries`, { method: "POST", body: JSON.stringify(p) }),
+  deleteEntry: (gId: number, entryId: number) =>
+    request<Game>(`/api/games/${gId}/entries/${entryId}`, { method: "DELETE" }),
   deleteGame: (id: number) =>
     request<void>(`/api/games/${id}`, { method: "DELETE" }),
   getPlatforms: () => request<Platform[]>("/api/platforms"),

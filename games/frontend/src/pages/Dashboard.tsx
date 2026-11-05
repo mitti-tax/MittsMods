@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Game } from "../api/client";
 import GameCard from "../components/GameCard";
-import { sortGames, totalHours, type LibraryFilter } from "../lib/games";
+import { STATUS_LABEL, entryOf, fmtHours, owned, sortGames, totalHours, type LibraryFilter } from "../lib/games";
 
 interface Props {
   games: Game[];
@@ -9,8 +9,9 @@ interface Props {
   onSeeAll: (f: Partial<LibraryFilter>) => void;
 }
 
-export default function Dashboard({ games, onOpen, onSeeAll }: Props) {
+export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
   const [slide, setSlide] = useState(0);
+  const games = owned(all); // hidden and wishlist games stay out of the dashboard
 
   const slideshowGames = sortGames(
     games.filter((g) => g.coverUrl && totalHours(g) > 0),
@@ -51,14 +52,14 @@ export default function Dashboard({ games, onOpen, onSeeAll }: Props) {
               onClick={() => onOpen(g)}
               aria-label={g.title}
             >
-              <img src={g.coverUrl!} className="slide-bg" alt="" />
-              <img src={g.coverUrl!} className="slide-cover" alt="" />
+              <img src={g.coverUrl!} className="slide-bg" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+              <img src={g.coverUrl!} className="slide-cover" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
               <span className="slide-info">
                 <span className="slide-title">{g.title}</span>
                 <span className="slide-meta">
                   {g.releaseYear && <span>{g.releaseYear}</span>}
-                  {g.userEntries[0] && <span className="slide-status">{g.userEntries[0].status.toUpperCase()}</span>}
-                  {!!g.userEntries[0]?.hoursPlayed && <span>{g.userEntries[0].hoursPlayed}h played</span>}
+                  {entryOf(g) && <span className="slide-status">{STATUS_LABEL[entryOf(g)!.status].toUpperCase()}</span>}
+                  {!!totalHours(g) && <span>{fmtHours(totalHours(g))} played</span>}
                 </span>
               </span>
             </button>
