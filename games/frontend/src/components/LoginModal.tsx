@@ -1,6 +1,7 @@
 // src/components/LoginModal.tsx
 
 import { useState } from "react";
+import { useEscape } from "../hooks/useEscape";
 
 interface Props {
   onClose: () => void;
@@ -12,6 +13,7 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  useEscape(onClose);
 
   const handleSubmit = async () => {
     if (!password.trim()) return;

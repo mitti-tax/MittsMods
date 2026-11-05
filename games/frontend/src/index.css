@@ -147,8 +147,14 @@ img {
   color: var(--text-muted);
   transition: all var(--transition);
   cursor: pointer;
+  border: 0;
   border-left: 2px solid transparent;
   letter-spacing: 0.02em;
+  /* nav items are <button>s; reset browser button styling */
+  width: 100%;
+  background: none;
+  font-family: inherit;
+  text-align: left;
 }
 
 .nav-item:hover {

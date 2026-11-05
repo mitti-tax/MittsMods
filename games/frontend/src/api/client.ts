@@ -82,19 +82,23 @@ export interface CreateGamePayload {
   };
 }
 
-export interface UpdateEntryPayload {
-  platformId?: number;
-  status?: string;
-  hoursPlayed?: number;
-  rating?: number;
-  notes?: string;
-  achievementsEarned?: number;
-  achievementsTotal?: number;
-  mode?: string;
-  hardware?: string;
-  startedAt?: string;
-  completedAt?: string;
-}
+// Changes to an entry; null clears a field
+export type UpdateEntryPayload = Partial<
+  Pick<
+    UserEntry,
+    | "platformId"
+    | "status"
+    | "hoursPlayed"
+    | "rating"
+    | "notes"
+    | "achievementsEarned"
+    | "achievementsTotal"
+    | "mode"
+    | "hardware"
+    | "startedAt"
+    | "completedAt"
+  >
+>;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   // Writes are rejected by the API without the admin token
@@ -121,11 +125,17 @@ export const api = {
   getGame: (id: number) => request<Game>(`/api/games/${id}`),
   createGame: (p: CreateGamePayload) =>
     request<Game>("/api/games", { method: "POST", body: JSON.stringify(p) }),
-  updateEntry: (gId: number, eId: number, p: UpdateEntryPayload) =>
-    request<Game>(`/api/games/${gId}/entries/${eId}`, {
+  // PUT replaces the entry, so send every current field with the changes on top
+  updateEntry: (gId: number, e: UserEntry, changes: UpdateEntryPayload) => {
+    const { platformId, status, hoursPlayed, rating, notes, achievementsEarned,
+      achievementsTotal, mode, hardware, startedAt, completedAt } = e;
+    const body = { platformId, status, hoursPlayed, rating, notes, achievementsEarned,
+      achievementsTotal, mode, hardware, startedAt, completedAt, ...changes };
+    return request<Game>(`/api/games/${gId}/entries/${e.id}`, {
       method: "PUT",
-      body: JSON.stringify(p),
-    }),
+      body: JSON.stringify(body),
+    });
+  },
   deleteGame: (id: number) =>
     request<void>(`/api/games/${id}`, { method: "DELETE" }),
   getPlatforms: () => request<Platform[]>("/api/platforms"),

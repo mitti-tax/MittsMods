@@ -104,17 +104,18 @@ public class GamesController : ControllerBase
 
         if (dto.Status != null && Enum.TryParse<PlayStatus>(dto.Status, out var status))
             entry.Status = status;
-        if (dto.HoursPlayed.HasValue)    entry.HoursPlayed        = dto.HoursPlayed;
-        if (dto.Rating.HasValue)         entry.Rating             = dto.Rating;
-        if (dto.Notes != null)           entry.Notes              = dto.Notes;
-        if (dto.AchievementsEarned.HasValue) entry.AchievementsEarned = dto.AchievementsEarned;
-        if (dto.AchievementsTotal.HasValue)  entry.AchievementsTotal  = dto.AchievementsTotal;
-        if (dto.Mode != null)
-            entry.Mode = Enum.TryParse<PlayMode>(dto.Mode, out var m) ? m : null;
         if (dto.Hardware != null && Enum.TryParse<HardwareType>(dto.Hardware, out var hw))
             entry.Hardware = hw;
-        if (dto.StartedAt.HasValue)      entry.StartedAt          = dto.StartedAt;
-        if (dto.CompletedAt.HasValue)    entry.CompletedAt        = dto.CompletedAt;
+
+        // PUT replaces the optional fields: null clears them, so clients send the full entry
+        entry.HoursPlayed        = dto.HoursPlayed;
+        entry.Rating             = dto.Rating;
+        entry.Notes              = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes;
+        entry.AchievementsEarned = dto.AchievementsEarned;
+        entry.AchievementsTotal  = dto.AchievementsTotal;
+        entry.Mode               = Enum.TryParse<PlayMode>(dto.Mode, out var m) ? m : null;
+        entry.StartedAt          = dto.StartedAt;
+        entry.CompletedAt        = dto.CompletedAt;
 
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();

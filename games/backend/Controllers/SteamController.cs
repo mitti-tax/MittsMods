@@ -25,17 +25,6 @@ public class SteamController : ControllerBase
     }
 
     // -------------------------------------------------------
-    // GET /api/steam/library
-    // Preview your Steam library without importing anything
-    // -------------------------------------------------------
-    [HttpGet("library")]
-    public async Task<ActionResult<List<SteamGameResult>>> GetLibrary()
-    {
-        var library = await _steam.GetLibraryAsync();
-        return Ok(library);
-    }
-
-    // -------------------------------------------------------
     // POST /api/steam/sync
     // Imports your Steam library into the games database
     // - Adds new games not already tracked

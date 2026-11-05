@@ -7,7 +7,11 @@ import {
   type IgdbResult,
   type PlayStatus,
   type UpdateEntryPayload,
+  type UserEntry,
+  type PlayMode,
+  type HardwareType,
 } from "../api/client";
+import { useEscape } from "../hooks/useEscape";
 
 interface Props {
   filter: "all" | string;
@@ -33,6 +37,7 @@ function PermissionDeniedModal({
   onClose: () => void;
   onLogin: () => void;
 }) {
+  useEscape(onClose);
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -165,11 +170,11 @@ export default function GamesPage({
 
   const handleUpdateEntry = async (
     gameId: number,
-    entryId: number,
+    entry: UserEntry,
     data: UpdateEntryPayload,
   ) => {
     try {
-      const updated = await api.updateEntry(gameId, entryId, data);
+      const updated = await api.updateEntry(gameId, entry, data);
       setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
       setSelected((prev) => (prev?.id === updated.id ? updated : prev));
       showToast("Updated", "success");
@@ -182,8 +187,8 @@ export default function GamesPage({
     const entry = game.userEntries[0];
     if (!entry) return;
     try {
-      const updated = await api.updateEntry(game.id, entry.id, {
-        status: newStatus,
+      const updated = await api.updateEntry(game.id, entry, {
+        status: newStatus as PlayStatus,
       });
       setGames((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
     } catch {
@@ -323,8 +328,8 @@ export default function GamesPage({
           isLoggedIn={isLoggedIn}
           onClose={() => setSelected(null)}
           onDelete={(id) => requireAuth(() => handleDelete(id))}
-          onUpdateEntry={(gId, eId, data) =>
-            requireAuth(() => handleUpdateEntry(gId, eId, data))
+          onUpdateEntry={(gId, entry, data) =>
+            requireAuth(() => handleUpdateEntry(gId, entry, data))
           }
           onLoginRequest={() => {
             setSelected(null);
@@ -358,7 +363,19 @@ function GameCard({
 }) {
   const entry = game.userEntries[0];
   return (
-    <div className="game-card" onClick={onClick}>
+    <div
+      className="game-card"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        // Ignore keys typed into the quick-status select inside the card
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       {game.coverUrl ? (
         <img src={game.coverUrl} className="game-card-cover" alt={game.title} />
       ) : (
@@ -408,6 +425,7 @@ function AddGameModal({
   onAdd: (p: CreateGamePayload) => void;
   onClose: () => void;
 }) {
+  useEscape(onClose);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<IgdbResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -723,9 +741,10 @@ function GameDetailModal({
   isLoggedIn: boolean;
   onClose: () => void;
   onDelete: (id: number) => void;
-  onUpdateEntry: (gameId: number, entryId: number, data: UpdateEntryPayload) => void;
+  onUpdateEntry: (gameId: number, entry: UserEntry, data: UpdateEntryPayload) => void;
   onLoginRequest: () => void;
 }) {
+  useEscape(onClose);
   const entry = game.userEntries[0];
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(entry?.status ?? "Backlog");
@@ -739,14 +758,14 @@ function GameDetailModal({
 
   const handleSave = () => {
     if (!entry) return;
-    onUpdateEntry(game.id, entry.id, {
+    // Empty inputs send null, which clears the field
+    onUpdateEntry(game.id, entry, {
       status,
-      mode: mode || undefined,
-      hardware,
-      hoursPlayed: hours ? parseFloat(hours) : undefined,
-      rating: rating ? parseInt(rating) : undefined,
-      // Send "" (not undefined) so clearing the notes box actually clears them
-      notes,
+      mode: (mode || null) as PlayMode | null,
+      hardware: hardware as HardwareType,
+      hoursPlayed: hours ? parseFloat(hours) : null,
+      rating: rating ? parseInt(rating) : null,
+      notes: notes || null,
     });
     setEditing(false);
   };

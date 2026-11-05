@@ -80,24 +80,24 @@ function App() {
         </div>
 
         <nav className="sidebar-nav">
-          <div
+          <button
             className={`nav-item ${page === "dashboard" ? "active" : ""}`}
             onClick={() => navigate("dashboard")}
           >
             <span className="nav-icon">◈</span> Dashboard
-          </div>
-          <div
+          </button>
+          <button
             className={`nav-item ${page === "games" ? "active" : ""}`}
             onClick={() => navigate("games")}
           >
             <span className="nav-icon">▦</span> All Games
-          </div>
-          <div
+          </button>
+          <button
             className={`nav-item ${page === "backlog" ? "active" : ""}`}
             onClick={() => navigate("backlog")}
           >
             <span className="nav-icon">◎</span> Backlog
-          </div>
+          </button>
         </nav>
 
         <div className="sidebar-bottom">

@@ -57,12 +57,14 @@ app.UseCors("FrontendPolicy");
 app.UseRateLimiter();
 
 // Every write needs a valid admin token, except logging in itself.
+// IGDB search too: only the admin's Add Game form uses it, and each call spends our IGDB quota.
 // Runs after CORS so a 401 still reaches the browser with CORS headers.
 app.Use(async (ctx, next) =>
 {
     var method = ctx.Request.Method;
     var isRead = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
-    if (!isRead && !ctx.Request.Path.StartsWithSegments("/api/auth"))
+    var path = ctx.Request.Path;
+    if ((!isRead && !path.StartsWithSegments("/api/auth")) || path.StartsWithSegments("/api/search"))
     {
         var secret = AdminToken.Secret(ctx.RequestServices.GetRequiredService<IConfiguration>());
         var header = ctx.Request.Headers.Authorization.ToString();
