@@ -40,3 +40,4 @@ jobs:
           publish_dir: games/frontend/dist
           destination_dir: games
           keep_files: true
+          cname: mittsmods.com

@@ -154,7 +154,7 @@ function App() {
           )}
 
           <a
-            href="https://mitti-tax.github.io/MittsMods/"
+            href="/"
             className="nav-item"
             style={{ fontSize: "11px", display: "flex", padding: "8px 0" }}
           >
