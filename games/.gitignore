@@ -19,3 +19,5 @@ frontend/dist/
 .vscode/
 .idea/
 *.user
+# Server secrets
+.env

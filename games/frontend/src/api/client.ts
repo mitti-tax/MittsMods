@@ -1,3 +1,5 @@
+import { TOKEN_KEY } from "../hooks/useAuth";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export type PlayStatus =
@@ -95,9 +97,14 @@ export interface UpdateEntryPayload {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  // Writes are rejected by the API without the admin token
+  const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
   if (res.status === 204) return undefined as T;

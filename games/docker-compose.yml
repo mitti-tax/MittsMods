@@ -1,0 +1,47 @@
+# Run on the server from this folder: docker compose up -d --build
+# Nothing is published to the network. The API is reachable only through the
+# Cloudflare tunnel, plus a loopback port for testing from the server itself.
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mittsmods
+      POSTGRES_USER: mittsmods
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mittsmods -d mittsmods"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # key=value form, so program.cs skips its SSL Mode=Require rewrite
+      DATABASE_URL: Host=db;Database=mittsmods;Username=mittsmods;Password=${DB_PASSWORD};SSL Mode=Disable
+      Twitch__ClientId: ${TWITCH_CLIENT_ID}
+      Twitch__ClientSecret: ${TWITCH_CLIENT_SECRET}
+      Steam__ApiKey: ${STEAM_API_KEY}
+      Steam__SteamId: ${STEAM_ID}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
