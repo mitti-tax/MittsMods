@@ -1,8 +1,6 @@
 import type { Game, PlayStatus } from "../api/client";
-import { STATUSES, STATUS_LABEL, entryOf, familyOf, fmtHours } from "../lib/games";
-import { usePlatform } from "../lib/platforms";
+import { STATUSES, STATUS_LABEL, entryOf, fmtHours } from "../lib/games";
 
-// A game box: cover, title, and a spine line coloured by console family
 export default function GameCard({
   game,
   onOpen,
@@ -10,54 +8,59 @@ export default function GameCard({
 }: {
   game: Game;
   onOpen: (g: Game) => void;
-  onStatus?: (g: Game, s: PlayStatus) => void; // set = quick status editing
+  onStatus?: (g: Game, s: PlayStatus) => void; // set = edit mode
 }) {
   const entry = entryOf(game);
-  const platform = usePlatform(entry?.platformId);
-
   return (
-    <article className="card" data-family={familyOf(entry?.platformId)}>
-      <button className="card-open" onClick={() => onOpen(game)}>
-        <Cover game={game} />
-        <span className="card-title">{game.title}</span>
-        <span className="card-meta">
-          {platform && <span className="spine">{platform.abbreviation}</span>}
-          {entry && !onStatus && (
-            <span className={`status status-${entry.status}`}>{STATUS_LABEL[entry.status]}</span>
-          )}
-          {entry?.hoursPlayed ? <span className="card-hours">{fmtHours(entry.hoursPlayed)}</span> : null}
-        </span>
-      </button>
+    <div
+      className="game-card"
+      role="button"
+      tabIndex={0}
+      aria-label={game.title}
+      onClick={() => onOpen(game)}
+      onKeyDown={(e) => {
+        // Ignore keys typed into the quick-status select inside the card
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onOpen(game);
+        }
+      }}
+    >
+      {game.coverUrl ? (
+        <img src={game.coverUrl} className="game-card-cover" alt="" loading="lazy" decoding="async" />
+      ) : (
+        <div className="game-card-cover-placeholder">🎮</div>
+      )}
       {game.isFavourite && (
-        <span className="fav-badge" role="img" aria-label="Favourite">
+        <span className="fav-star" role="img" aria-label="Favourite">
           ★
         </span>
       )}
-      {entry && onStatus && (
-        <select
-          className="quick-status"
-          aria-label={`Status of ${game.title}`}
-          value={entry.status}
-          onChange={(e) => onStatus(game, e.target.value as PlayStatus)}
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </option>
-          ))}
-        </select>
-      )}
-    </article>
-  );
-}
-
-// Box art, or a blank case with the title on it when there's no art
-export function Cover({ game, className = "cover" }: { game: Game; className?: string }) {
-  return game.coverUrl ? (
-    <img className={className} src={game.coverUrl} alt="" loading="lazy" decoding="async" />
-  ) : (
-    <span className={`${className} cover-blank`} aria-hidden="true">
-      {game.title}
-    </span>
+      <div className="game-card-body">
+        <div className="game-card-title">{game.title}</div>
+        {entry && (
+          <div className="game-card-meta">
+            {onStatus ? (
+              <select
+                className="quick-status-select"
+                aria-label={`Status of ${game.title}`}
+                value={entry.status}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onStatus(game, e.target.value as PlayStatus)}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className={`status-badge status-${entry.status}`}>{STATUS_LABEL[entry.status]}</span>
+            )}
+            {entry.hoursPlayed ? <span className="game-card-hours">{fmtHours(entry.hoursPlayed)}</span> : null}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

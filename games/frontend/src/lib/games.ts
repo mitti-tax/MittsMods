@@ -1,6 +1,6 @@
 import type { Game, PlayStatus, UserEntry } from "../api/client";
 
-export const STATUSES: PlayStatus[] = ["Playing", "Backlog", "Completed", "OnHold", "Dropped"];
+export const STATUSES: PlayStatus[] = ["Backlog", "Playing", "Completed", "Dropped", "OnHold"];
 export const MODES = ["Handheld", "TV", "CRT"] as const;
 export const HARDWARE = ["Original", "Modded", "Emulator", "Cloud"] as const;
 
@@ -12,22 +12,11 @@ export const STATUS_LABEL: Record<PlayStatus, string> = {
   Dropped: "Dropped",
 };
 
-// Console family by seeded platform id (see backend AppDbContext): drives the spine colour
-export type Family = "pc" | "xbox" | "playstation" | "nintendo" | "sega" | "other";
-export function familyOf(platformId: number | undefined): Family {
-  if (platformId === 1) return "pc";
-  if (platformId! >= 2 && platformId! <= 5) return "xbox";
-  if (platformId! >= 6 && platformId! <= 12) return "playstation";
-  if (platformId! >= 13 && platformId! <= 25) return "nintendo";
-  if (platformId === 26) return "sega";
-  return "other";
-}
-
 export const entryOf = (g: Game): UserEntry | undefined => g.userEntries[0];
 
 export function fmtHours(h: number | null | undefined): string {
   if (!h) return "";
-  return `${h < 10 ? Math.round(h * 10) / 10 : Math.round(h).toLocaleString()} h`;
+  return `${h < 10 ? Math.round(h * 10) / 10 : Math.round(h).toLocaleString()}h`;
 }
 
 export const totalHours = (g: Game) =>

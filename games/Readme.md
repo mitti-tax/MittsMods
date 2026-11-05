@@ -24,13 +24,12 @@ A personal game tracking and logging application. Tracks every game played acros
 - **Steam sync** — imports full library, hours played, and achievements automatically
 - **IGDB integration** — searches for game metadata, cover art, genres, and developers on add
 - **Personal log** — track status (Backlog / Playing / Completed / Dropped / On Hold), hours, rating, notes, play mode (Handheld / TV / CRT), and hardware type (Original / Modded / Emulator / Cloud)
-- **Home** — recently played slideshow, a one-line tally of the library, and shelves for now playing, favourites, recently added and top rated
-- **Library** — search, console filter, sort, and status chips with counts
-- **Consoles** — one shelf per console, colour-coded by console family
-- **Edit statuses** — bulk status changes directly on game cards without opening each one
+- **Dashboard** — recently played slideshow, stats bar (total games, hours, completed, playing now), currently playing, favourites and recently added
+- **Library** — search, platform filter, sort, and status chips with counts
+- **Edit mode** — bulk status changes directly on game cards without opening each one
 - **Favourites** — star games from their detail sheet
 - **Role-based access** — guests can browse freely, admin login required to add, edit, or delete
-- **Responsive** — iPhone-style layout on phones (tab bar, large titles, bottom sheets), desktop header on wider screens
+- **Responsive** — iPhone-style layout on phones (tab bar, large titles, bottom sheets), sidebar on desktop
 - **27 platforms currently supported** — from NES to Xbox Series S/X, Dreamcast, PS Vita, Switch 2, and more
 
 ---
@@ -49,10 +48,10 @@ games/
 └── frontend/
     └── src/
         ├── api/        # Centralised API client
-        ├── components/ # GameCard, Shelf, GameSheet, AddGameSheet, EntryFields, sheets
+        ├── components/ # GameCard, GameSheet, AddGameSheet, EntryFields, LoginModal, sheets
         ├── hooks/      # useAuth, useLibrary, useEscape
-        ├── lib/        # Sorting, filters, formatting, console families
-        └── pages/      # Dashboard (home), LibraryPage, ConsolesPage
+        ├── lib/        # Sorting, filters, formatting
+        └── pages/      # Dashboard, GamesPage (All Games and Backlog)
 ```
 
 ---

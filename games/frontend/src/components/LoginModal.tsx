@@ -1,3 +1,5 @@
+// src/components/LoginModal.tsx
+
 import { useState } from "react";
 import { useEscape } from "../hooks/useEscape";
 import SheetHeader from "./SheetHeader";
@@ -14,7 +16,7 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [loading, setLoading] = useState(false);
   useEscape(onClose);
 
-  const submit = async () => {
+  const handleSubmit = async () => {
     if (!password.trim() || loading) return;
     setLoading(true);
     setError("");
@@ -25,60 +27,88 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
         onClose();
         return;
       }
-      setError(result.message ?? "That password isn't right.");
+      setError(result.message ?? "Incorrect password.");
     } catch {
       setError("Couldn't reach the server. Check your connection and try again.");
     }
     setLoading(false);
   };
 
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSubmit();
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <form
-        className="modal modal-narrow"
-        role="dialog"
-        aria-label="Admin login"
+      <div
+        className="modal"
+        style={{ maxWidth: "380px" }}
         onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
       >
         <SheetHeader
-          title="Admin login"
+          title="Admin Login"
           onCancel={onClose}
-          confirmLabel={loading ? "Checking…" : "Log in"}
-          onConfirm={submit}
+          confirmLabel={loading ? "Checking…" : "Log In"}
+          onConfirm={handleSubmit}
           confirmDisabled={loading || !password.trim()}
         />
         <div className="modal-body">
-          <p className="muted">Log in to add games, edit your log and sync Steam.</p>
-          <div className="field">
-            <label className="field-label" htmlFor="f-password">
-              Password
-            </label>
+          <p
+            style={{
+              fontSize: "0.8125rem",
+              color: "var(--text-muted)",
+              marginBottom: "20px",
+            }}
+          >
+            Enter the admin password to edit your game library.
+          </p>
+
+          <div className="form-group">
+            <label className="form-label">Password</label>
             <input
-              id="f-password"
-              className="input"
+              className="form-input"
               type="password"
               autoComplete="current-password"
               enterKeyHint="go"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleKey}
               autoFocus
             />
           </div>
-          {error && <p className="form-error">{error}</p>}
+
+          {error && (
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--red)",
+                fontFamily: "var(--font-mono)",
+                marginBottom: "12px",
+                padding: "8px 10px",
+                background: "rgba(224,85,85,0.08)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid rgba(224,85,85,0.2)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           <div className="btn-row">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>
+            <button className="btn btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading || !password.trim()}>
-              {loading ? "Checking…" : "Log in"}
+            <button
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              disabled={loading || !password.trim()}
+            >
+              {loading ? "Checking..." : "Log In"}
             </button>
           </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

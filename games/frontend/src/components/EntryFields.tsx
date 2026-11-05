@@ -1,85 +1,99 @@
-import { useContext } from "react";
-import type { PlayStatus } from "../api/client";
-import { HARDWARE, MODES, STATUSES, STATUS_LABEL, draftError, familyOf, type EntryDraft } from "../lib/games";
-import { PlatformsContext } from "../lib/platforms";
+import type { Platform, PlayStatus } from "../api/client";
+import { HARDWARE, MODES, STATUSES, STATUS_LABEL, draftError, type EntryDraft } from "../lib/games";
 
-const FAMILY_NAME: Record<string, string> = {
-  pc: "PC",
-  xbox: "Xbox",
-  playstation: "PlayStation",
-  nintendo: "Nintendo",
-  sega: "Sega",
-  other: "Other",
-};
-
-// Log fields shared by Add game and Edit
+// Log fields shared by Add Game and Edit Entry
 export default function EntryFields({
   draft,
   onChange,
+  platforms,
 }: {
   draft: EntryDraft;
   onChange: (d: EntryDraft) => void;
+  platforms: Platform[];
 }) {
-  const platforms = useContext(PlatformsContext);
   const set = (patch: Partial<EntryDraft>) => onChange({ ...draft, ...patch });
-  const families = Object.keys(FAMILY_NAME).filter((f) => platforms.some((p) => familyOf(p.id) === f));
+  const error = draftError(draft);
 
   return (
     <>
-      <div className="field">
-        <label className="field-label" htmlFor="f-platform">
-          Console
-        </label>
-        <select
-          id="f-platform"
-          className="input"
-          value={draft.platformId}
-          onChange={(e) => set({ platformId: Number(e.target.value) })}
-        >
-          {families.map((f) => (
-            <optgroup key={f} label={FAMILY_NAME[f]}>
-              {platforms
-                .filter((p) => familyOf(p.id) === f)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-platform">
+            Platform
+          </label>
+          <select
+            id="f-platform"
+            className="form-select"
+            value={draft.platformId}
+            onChange={(e) => set({ platformId: Number(e.target.value) })}
+          >
+            {platforms.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-status">
+            Status
+          </label>
+          <select
+            id="f-status"
+            className="form-select"
+            value={draft.status}
+            onChange={(e) => set({ status: e.target.value as PlayStatus })}
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <Segmented
-        label="Status"
-        name="status"
-        value={draft.status}
-        options={STATUSES.map((s) => [s, STATUS_LABEL[s]])}
-        onChange={(v) => set({ status: v as PlayStatus })}
-      />
-      <Segmented
-        label="Played on"
-        name="mode"
-        value={draft.mode}
-        options={[["", "Not set"], ...MODES.map((m) => [m, m] as [string, string])]}
-        onChange={(v) => set({ mode: v })}
-      />
-      <Segmented
-        label="Hardware"
-        name="hardware"
-        value={draft.hardware}
-        options={HARDWARE.map((h) => [h, h])}
-        onChange={(v) => set({ hardware: v })}
-      />
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-mode">
+            Play Mode
+          </label>
+          <select id="f-mode" className="form-select" value={draft.mode} onChange={(e) => set({ mode: e.target.value })}>
+            <option value="">— Not specified</option>
+            {MODES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-hardware">
+            Hardware
+          </label>
+          <select
+            id="f-hardware"
+            className="form-select"
+            value={draft.hardware}
+            onChange={(e) => set({ hardware: e.target.value })}
+          >
+            {HARDWARE.map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      <div className="field-pair">
-        <div className="field">
-          <label className="field-label" htmlFor="f-hours">
-            Hours played
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-hours">
+            Hours Played
           </label>
           <input
             id="f-hours"
-            className="input"
+            className="form-input"
             type="number"
             inputMode="decimal"
             min="0"
@@ -89,19 +103,19 @@ export default function EntryFields({
             onChange={(e) => set({ hours: e.target.value })}
           />
         </div>
-        <div className="field">
-          <label className="field-label" htmlFor="f-rating">
-            Rating out of 10
+        <div className="form-group">
+          <label className="form-label" htmlFor="f-rating">
+            Rating (1–10)
           </label>
           <input
             id="f-rating"
-            className="input"
+            className="form-input"
             type="number"
             inputMode="numeric"
             min="1"
             max="10"
             step="1"
-            placeholder="Unrated"
+            placeholder="—"
             value={draft.rating}
             onChange={(e) => set({ rating: e.target.value })}
           />
@@ -109,49 +123,24 @@ export default function EntryFields({
       </div>
 
       {/* Right under the numbers it's about, so it's never off screen */}
-      {draftError(draft) && <p className="form-error" role="alert">{draftError(draft)}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="field">
-        <label className="field-label" htmlFor="f-notes">
+      <div className="form-group">
+        <label className="form-label" htmlFor="f-notes">
           Notes
         </label>
         <textarea
           id="f-notes"
-          className="input"
-          rows={3}
-          placeholder="Mods, settings, thoughts…"
+          className="form-textarea"
+          placeholder="Your thoughts..."
           value={draft.notes}
           onChange={(e) => set({ notes: e.target.value })}
         />
       </div>
     </>
-  );
-}
-
-function Segmented({
-  label,
-  name,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  options: [string, string][];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <fieldset className="field">
-      <legend className="field-label">{label}</legend>
-      <div className="segmented">
-        {options.map(([v, text]) => (
-          <label key={v} className="seg">
-            <input type="radio" name={name} value={v} checked={value === v} onChange={() => onChange(v)} />
-            <span>{text}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }

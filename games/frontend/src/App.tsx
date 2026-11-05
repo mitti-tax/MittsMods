@@ -8,53 +8,56 @@ import { useAuth } from "./hooks/useAuth";
 import { useEscape } from "./hooks/useEscape";
 import { useLibrary } from "./hooks/useLibrary";
 import { DEFAULT_FILTER, entryOf, type LibraryFilter } from "./lib/games";
-import { PlatformsContext } from "./lib/platforms";
-import ConsolesPage from "./pages/ConsolesPage";
 import Dashboard from "./pages/Dashboard";
-import LibraryPage from "./pages/LibraryPage";
+import GamesPage from "./pages/GamesPage";
 import "./index.css";
 
-type Page = "home" | "library" | "consoles";
+type Page = "dashboard" | "games" | "backlog";
 
-const PAGES: { page: Page; label: string; title: string; icon: string }[] = [
-  { page: "home", label: "Home", title: "GameLog", icon: "M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" },
-  { page: "library", label: "Library", title: "Library", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
-  {
-    page: "consoles",
-    label: "Consoles",
-    title: "Consoles",
-    icon: "M7 7h10a5 5 0 0 1 0 10c-1.6 0-2.4-1-3-2h-4c-.6 1-1.4 2-3 2A5 5 0 0 1 7 7zm0 3v1.5H5.5v1.5H7v1.5h1.5V13H10v-1.5H8.5V10zm8.5 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2-1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
-  },
+const PAGE_TITLES: Record<Page, string> = {
+  dashboard: "GameLog",
+  games: "All Games",
+  backlog: "Backlog",
+};
+
+const TABS: { page: Page; label: string; icon: string }[] = [
+  { page: "dashboard", label: "Home", icon: "M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" },
+  { page: "games", label: "Games", icon: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" },
+  { page: "backlog", label: "Backlog", icon: "M6 3h12v18l-6-4-6 4z" },
 ];
 
 // The page lives in the URL hash so refresh and the back button work
 const pageFromHash = (): Page => {
   const h = window.location.hash.replace("#/", "");
-  return PAGES.some((p) => p.page === h) ? (h as Page) : "home";
+  return h in PAGE_TITLES ? (h as Page) : "dashboard";
 };
+
+const BACKLOG_FILTER: LibraryFilter = { ...DEFAULT_FILTER, status: "Backlog" };
 
 function App() {
   const [page, setPage] = useState<Page>(pageFromHash);
-  const [filter, setFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
+  const [gamesFilter, setGamesFilter] = useState<LibraryFilter>(DEFAULT_FILTER);
+  const [backlogFilter, setBacklogFilter] = useState<LibraryFilter>(BACKLOG_FILTER);
   const [openId, setOpenId] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; ok: boolean; id: number } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error"; id: number } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // One toast at a time; a new one restarts the timer instead of being cut short
   const notify = useCallback((msg: string, ok = true) => {
     clearTimeout(toastTimer.current);
-    setToast({ msg, ok, id: Date.now() });
-    toastTimer.current = setTimeout(() => setToast(null), ok ? 3000 : 6000);
+    setToast({ msg, type: ok ? "success" : "error", id: Date.now() });
+    toastTimer.current = setTimeout(() => setToast(null), ok ? 3000 : 5000);
   }, []);
 
   const { isLoggedIn, login, logout } = useAuth();
   const lib = useLibrary(notify);
   const open = lib.games.find((g) => g.id === openId); // always the latest copy
 
-  // iOS large title: the nav bar shows the small title once the large one scrolls away
+  // iOS large title: nav bar shows the small title once the large one scrolls away
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 36);
@@ -74,20 +77,20 @@ function App() {
   };
 
   const seeAll = (f: Partial<LibraryFilter>) => {
-    setFilter({ ...DEFAULT_FILTER, ...f });
-    navigate("library");
+    setGamesFilter({ ...DEFAULT_FILTER, ...f });
+    navigate("games");
   };
 
-  const sync = async () => {
+  const handleSync = async () => {
     if (!isLoggedIn) return setShowLogin(true);
     setSyncing(true);
     try {
-      const r = await api.syncSteam();
-      notify(`Steam synced: ${r.added} added, ${r.updated} updated`);
+      const result = await api.syncSteam();
+      notify(`Synced — ${result.added} added, ${result.updated} updated`);
       lib.load();
     } catch (e) {
       const running = e instanceof Error && e.message.startsWith("API error 409");
-      notify(running ? "A Steam sync is already running. Give it a minute." : "Steam sync failed. Try again.", false);
+      notify(running ? "A sync is already running" : "Steam sync failed", false);
     } finally {
       setSyncing(false);
     }
@@ -98,96 +101,98 @@ function App() {
     if (e) lib.update(g, e, { status }, true);
   };
 
-  const current = PAGES.find((p) => p.page === page)!;
+  const openGame = (g: Game) => setOpenId(g.id);
 
   let content;
   if (lib.state === "loading") content = <LoadingState />;
   else if (lib.state === "error") content = <ErrorState onRetry={lib.retry} />;
   else if (lib.games.length === 0)
-    content = <EmptyLibrary isLoggedIn={isLoggedIn} onAdd={() => setShowAdd(true)} onSync={sync} />;
-  else if (page === "home") content = <Dashboard games={lib.games} onOpen={(g) => setOpenId(g.id)} onSeeAll={seeAll} />;
-  else if (page === "library")
+    content = <EmptyLibrary isLoggedIn={isLoggedIn} onAdd={() => setShowAdd(true)} onSync={handleSync} />;
+  else if (page === "dashboard") content = <Dashboard games={lib.games} onOpen={openGame} onSeeAll={seeAll} />;
+  else {
+    const backlog = page === "backlog";
     content = (
-      <LibraryPage
+      <GamesPage
+        key={page}
         games={lib.games}
-        filter={filter}
-        onFilter={setFilter}
+        platforms={lib.platforms}
+        filter={backlog ? backlogFilter : gamesFilter}
+        onFilter={backlog ? setBacklogFilter : setGamesFilter}
         isLoggedIn={isLoggedIn}
-        onOpen={(g) => setOpenId(g.id)}
+        onOpen={openGame}
         onAdd={() => setShowAdd(true)}
+        onLoginRequest={() => setShowLogin(true)}
         onQuickStatus={quickStatus}
       />
     );
-  else content = <ConsolesPage games={lib.games} onOpen={(g) => setOpenId(g.id)} onSeeAll={seeAll} />;
+  }
 
   return (
-    <PlatformsContext.Provider value={lib.platforms}>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
+    <div className="app">
+      {/* Mobile nav bar (iOS-style; sidebar is desktop only) */}
+      <header className={`mobile-topbar ${scrolled ? "scrolled" : ""}`}>
+        <span className="mobile-topbar-title">{PAGE_TITLES[page]}</span>
+      </header>
 
-      {/* Desktop header */}
-      <header className="masthead">
-        <a className="wordmark" href="#/home" onClick={() => window.scrollTo(0, 0)}>
-          GameLog
-        </a>
-        <nav className="masthead-nav" aria-label="Sections">
-          {PAGES.map((p) => (
-            <a
-              key={p.page}
-              href={`#/${p.page}`}
-              className="masthead-link"
-              aria-current={page === p.page ? "page" : undefined}
-              onClick={() => window.scrollTo(0, 0)}
-            >
-              {p.label}
-            </a>
-          ))}
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <h1>GameLog</h1>
+          <span>by MittsMods</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          <button className={`nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => navigate("dashboard")}>
+            <span className="nav-icon">◈</span> Dashboard
+          </button>
+          <button className={`nav-item ${page === "games" ? "active" : ""}`} onClick={() => navigate("games")}>
+            <span className="nav-icon">▦</span> All Games
+          </button>
+          <button className={`nav-item ${page === "backlog" ? "active" : ""}`} onClick={() => navigate("backlog")}>
+            <span className="nav-icon">◎</span> Backlog
+          </button>
         </nav>
-        <div className="masthead-actions">
-          {isLoggedIn ? (
-            <>
-              <button className="btn btn-ghost" onClick={sync} disabled={syncing}>
-                {syncing ? "Syncing…" : "Sync Steam"}
-              </button>
-              <button className="link-btn" onClick={logout}>
-                Log out
-              </button>
-            </>
-          ) : (
-            <button className="link-btn" onClick={() => setShowLogin(true)}>
-              Admin login
+
+        <div className="sidebar-bottom">
+          {isLoggedIn && (
+            <button className="sync-btn" onClick={handleSync} disabled={syncing}>
+              {syncing ? "SYNCING..." : "⟳ SYNC STEAM"}
             </button>
           )}
-          <a className="link-btn" href="/">
-            MittsMods
+          {isLoggedIn ? (
+            <button className="nav-item sidebar-link" onClick={logout}>
+              <span className="nav-icon">⏻</span> Log Out
+            </button>
+          ) : (
+            <button className="nav-item sidebar-link sidebar-login" onClick={() => setShowLogin(true)}>
+              <span className="nav-icon">→</span> Admin Login
+            </button>
+          )}
+          <a href="/" className="nav-item sidebar-link">
+            <span className="nav-icon">←</span> MittsMods
           </a>
         </div>
-      </header>
+      </aside>
 
-      {/* Phone nav bar */}
-      <header className={`mobile-topbar ${scrolled ? "scrolled" : ""}`}>
-        <span className="mobile-topbar-title">{current.title}</span>
-      </header>
-
-      <main className="main" id="main">
-        <h1 className="large-title">{current.title}</h1>
+      {/* Main content */}
+      <main className="main">
+        <h1 className="large-title">{PAGE_TITLES[page]}</h1>
         {content}
       </main>
 
-      {/* Phone tab bar */}
+      {/* Mobile tab bar */}
       <nav className="tabbar" aria-label="Sections">
-        {PAGES.map((p) => (
+        {TABS.map((t) => (
           <button
-            key={p.page}
-            className="tab"
-            aria-current={page === p.page ? "page" : undefined}
-            onClick={() => navigate(p.page)}
+            key={t.page}
+            className={`tab ${page === t.page ? "active" : ""}`}
+            aria-current={page === t.page ? "page" : undefined}
+            onClick={() => navigate(t.page)}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d={p.icon} fillRule="evenodd" />
+              <path d={t.icon} />
             </svg>
-            {p.label}
+            {t.label}
           </button>
         ))}
         <button className="tab" onClick={() => setShowAccount(true)}>
@@ -202,15 +207,19 @@ function App() {
         <GameSheet
           key={open.id}
           game={open}
+          platforms={lib.platforms}
           isLoggedIn={isLoggedIn}
           onClose={() => setOpenId(null)}
           onSave={lib.update}
           onDelete={lib.remove}
           onToggleFavourite={lib.toggleFavourite}
+          onLoginRequest={() => setShowLogin(true)}
         />
       )}
 
-      {showAdd && isLoggedIn && <AddGameSheet onAdd={lib.add} onClose={() => setShowAdd(false)} />}
+      {showAdd && isLoggedIn && (
+        <AddGameSheet platforms={lib.platforms} onAdd={lib.add} onClose={() => setShowAdd(false)} />
+      )}
 
       {showAccount && (
         <AccountSheet
@@ -219,7 +228,7 @@ function App() {
           onClose={() => setShowAccount(false)}
           onSync={() => {
             setShowAccount(false);
-            sync();
+            handleSync();
           }}
           onLogin={() => {
             setShowAccount(false);
@@ -228,25 +237,28 @@ function App() {
           onLogout={() => {
             setShowAccount(false);
             logout();
-            notify("Logged out");
           }}
         />
       )}
 
       {showLogin && (
-        <LoginModal onClose={() => setShowLogin(false)} onSuccess={() => notify("Logged in. Editing is on.")} login={login} />
+        <LoginModal
+          onClose={() => setShowLogin(false)}
+          onSuccess={() => notify("Logged in as admin")}
+          login={login}
+        />
       )}
 
       {toast && (
-        <div key={toast.id} className={`toast ${toast.ok ? "" : "toast-error"}`} role="status">
+        <div key={toast.id} className={`toast ${toast.type}`} role="status">
           {toast.msg}
         </div>
       )}
-    </PlatformsContext.Provider>
+    </div>
   );
 }
 
-// iOS-style action sheet holding what the desktop header shows
+// iOS-style action sheet for what the sidebar footer holds on desktop
 function AccountSheet({
   isLoggedIn,
   syncing,
@@ -269,16 +281,16 @@ function AccountSheet({
         <div className="action-group">
           {isLoggedIn && (
             <button className="action" onClick={onSync} disabled={syncing}>
-              {syncing ? "Syncing…" : "Sync Steam library"}
+              {syncing ? "Syncing…" : "Sync Steam Library"}
             </button>
           )}
           {isLoggedIn ? (
             <button className="action destructive" onClick={onLogout}>
-              Log out
+              Log Out
             </button>
           ) : (
             <button className="action" onClick={onLogin}>
-              Admin login
+              Admin Login
             </button>
           )}
           <a className="action" href="/">
