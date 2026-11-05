@@ -1,4 +1,7 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using MittsModsApi.Controllers;
 using MittsModsApi.Data;
 using MittsModsApi.Services;
 
@@ -20,6 +23,18 @@ var connectionString = ConvertDatabaseUrl(rawUrl!);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Slows down password guessing on /api/auth/login
+// ponytail: one global bucket (behind the tunnel every client shares an IP anyway); per-IP needs CF-Connecting-IP
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddFixedWindowLimiter("login", w =>
+    {
+        w.PermitLimit = 5;
+        w.Window = TimeSpan.FromMinutes(1);
+    });
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
@@ -39,6 +54,27 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 app.UseCors("FrontendPolicy");
+app.UseRateLimiter();
+
+// Every write needs a valid admin token, except logging in itself.
+// Runs after CORS so a 401 still reaches the browser with CORS headers.
+app.Use(async (ctx, next) =>
+{
+    var method = ctx.Request.Method;
+    var isRead = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
+    if (!isRead && !ctx.Request.Path.StartsWithSegments("/api/auth"))
+    {
+        var secret = AdminToken.Secret(ctx.RequestServices.GetRequiredService<IConfiguration>());
+        var header = ctx.Request.Headers.Authorization.ToString();
+        var token = header.StartsWith("Bearer ") ? header["Bearer ".Length..] : null;
+        if (string.IsNullOrEmpty(secret) || !AdminToken.IsValid(token, secret))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+    }
+    await next();
+});
 app.UseAuthorization();
 app.MapControllers();
 

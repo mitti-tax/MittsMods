@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 
-const TOKEN_KEY = "mittsmods_admin_token";
+export const TOKEN_KEY = "mittsmods_admin_token";
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function useAuth() {
