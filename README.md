@@ -2,24 +2,24 @@
 
 Personal tech blog and portfolio.
 
-**GitHub Pages:** [mitti-tax.github.io/MittsMods](https://mitti-tax.github.io/MittsMods)
+**Live:** [mittsmods.com](https://mittsmods.com)
 
 ---
 
 ## What's in this repo
 
 ### MittsMods Website
-A static blog and portfolio site built from HTML, CSS and Javascript, hosted on GitHub Pages.
+A static blog and portfolio site built from HTML, CSS and Javascript, hosted on GitHub Pages at mittsmods.com.
 
 ### Games Database
 A full-stack web application for tracking and logging a personal game library, built as a portfolio project. Features Steam library sync, IGDB game metadata, and a responsive dashboard UI.
 
-**Live:** [mitti-tax.github.io/MittsMods/games](https://mitti-tax.github.io/MittsMods/games)
+**Live:** [mittsmods.com/games](https://mittsmods.com/games/)
 
 | Layer    | Tech                                        |
 |----------|---------------------------------------------|
 | Frontend | React + TypeScript (Vite), GitHub Pages     |
-| Backend  | C# ASP.NET Core 10 Web API, Railway         |
+| Backend  | C# ASP.NET Core 10 Web API, self-hosted     |
 | Database | PostgreSQL via Entity Framework Core        |
 | APIs     | Steam Web API, IGDB (Twitch OAuth)          |
 
@@ -34,7 +34,8 @@ MittsMods/
 ├── projects.html       # Projects / blog listing
 ├── style.css           # Shared stylesheet
 ├── games/
-│   ├── backend/        # ASP.NET Core API
+│   ├── backend/        # ASP.NET Core API + Dockerfile
+│   ├── docker-compose.yml  # API, Postgres, Cloudflare Tunnel
 │   └── frontend/       # React + Vite app
 └── .github/
     └── workflows/      # CI/CD deploy pipelines

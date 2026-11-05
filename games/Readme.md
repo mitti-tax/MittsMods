@@ -2,8 +2,8 @@
 
 A personal game tracking and logging application. Tracks every game played across my personal Steam Library, and includes sync, IGDB metadata, achievements, ratings, and personal notes.
 
-**Live:** [mitti-tax.github.io/MittsMods/games](https://mitti-tax.github.io/MittsMods/games)  
-**API:** [mittsmods-production.up.railway.app](https://mittsmods-production.up.railway.app)
+**Live:** [mittsmods.com/games](https://mittsmods.com/games/)  
+**API:** [api.mittsmods.com](https://api.mittsmods.com/api/platforms)
 
 ---
 
@@ -12,10 +12,11 @@ A personal game tracking and logging application. Tracks every game played acros
 | Layer    | Tech                                                |
 | -------- | --------------------------------------------------- |
 | Frontend | React + TypeScript (Vite), deployed to GitHub Pages |
-| Backend  | C# ASP.NET Core 10 Web API, deployed to Railway     |
+| Backend  | C# ASP.NET Core 10 Web API, self-hosted with Docker |
 | Database | PostgreSQL via Entity Framework Core                |
 | APIs     | Steam Web API, IGDB via Twitch OAuth                |
-| CI/CD    | GitHub Actions — auto deploys on push to `main`     |
+| Hosting  | Docker Compose behind a Cloudflare Tunnel           |
+| CI/CD    | GitHub Actions deploys the frontend on push         |
 
 ---
 
@@ -26,7 +27,7 @@ A personal game tracking and logging application. Tracks every game played acros
 - **Personal log** — track status (Backlog / Playing / Completed / Dropped / On Hold), hours, rating, notes, play mode (Handheld / TV / CRT), and hardware type (Original / Modded / Emulator / Cloud)
 - **Dashboard** — recently played slideshow, stats bar (total games, hours, completed, playing now)
 - **Edit mode** — bulk status changes directly on game cards without opening each one
-- **Role-based access** — guests can browse freely, admin login required to add, edit, or delete
+- **Role-based access** — guests can browse freely; the API rejects any add, edit, or delete without a signed admin token
 - **Responsive** — mobile-friendly with slide-in sidebar and bottom-sheet modals
 - **27 platforms currently supported** — from NES to Xbox Series S/X, Dreamcast, PS Vita, Switch 2, and more
 
@@ -106,23 +107,25 @@ Frontend runs at: `http://localhost:5173`
 
 ## Deployment
 
-| Service  | Platform     | Trigger                                       |
-| -------- | ------------ | --------------------------------------------- |
-| Frontend | GitHub Pages | Push to `main` (changes in `games/frontend/`) |
-| Backend  | Railway      | Push to `main` (changes in `games/backend/`)  |
+| Service  | Where                                  | How                                                        |
+| -------- | -------------------------------------- | ---------------------------------------------------------- |
+| Frontend | GitHub Pages (`mittsmods.com/games`)   | GitHub Actions on push to `main` (changes in `games/frontend/`) |
+| Backend  | Self-hosted server, Docker Compose     | `git pull && docker compose up -d --build`                 |
+| Database | PostgreSQL container on the same host  | Only reachable inside the Docker network                   |
 
-Railway environment variables required:
+The API is published through a Cloudflare Tunnel, so the server has no open inbound ports. The frontend's API URL lives in `frontend/.env.production`.
 
+### Running the backend
+
+```bash
+cd games
+cp .env.example .env                    # fill in, then chmod 600 .env
+docker compose up -d --build db api
+ADMIN_PASSWORD='...' ./check-auth.sh    # smoke-tests reads, rejected writes, and login
+docker compose up -d                    # also starts cloudflared once TUNNEL_TOKEN is set
 ```
-DATABASE_URL        (injected automatically from Railway Postgres)
-ASPNETCORE_ENVIRONMENT = Production
-ASPNETCORE_URLS        = http://+:$PORT
-Twitch__ClientId
-Twitch__ClientSecret
-Steam__ApiKey
-Steam__SteamId
-ADMIN_PASSWORD
-```
+
+Required variables are listed in `.env.example`.
 
 ---
 
@@ -135,3 +138,4 @@ ADMIN_PASSWORD
 - [x] M5 — React frontend (dashboard, game library, add/edit/delete)
 - [x] M6 — Dashboard stats, recently played slideshow
 - [x] M7 — PostgreSQL migration, Railway deployment, GitHub Actions CI/CD, auth, mobile UI
+- [x] M8 — Moved the API from Railway to a self-hosted Docker stack behind Cloudflare Tunnel, signed admin tokens on all writes, custom domain
