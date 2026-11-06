@@ -81,3 +81,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+// Lets the test project start the API in memory (WebApplicationFactory<Program>)
+public partial class Program;

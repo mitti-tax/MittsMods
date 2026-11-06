@@ -48,13 +48,14 @@ games/
 │   ├── Data/           # EF Core DbContext, migrations
 │   ├── DTOs/           # Request/response models
 │   ├── Models/         # Game, Platform, UserEntry, StatusChange
-│   ├── Services/       # IgdbService, SteamService
+│   ├── Services/       # IgdbService, SteamService, SteamSync (+ the 6-hourly sync job)
 │   └── program.cs
+├── backend.Tests/      # API tests: real Postgres in Docker, fake Steam/IGDB (dotnet test)
 └── frontend/
     └── src/
         ├── api/        # Centralised API client
         ├── components/ # GameCard, GameSheet, AddGameSheet, EntryFields, LoginModal, sheets
-        ├── hooks/      # useAuth, useLibrary, useEscape
+        ├── hooks/      # useAuth, useLibrary, useSheet
         ├── lib/        # Sorting, filters, URL state, CSV (tested: npm test)
         └── pages/      # Dashboard, GamesPage (All Games and Backlog), Stats
 ```
@@ -99,6 +100,8 @@ Create `appsettings.Development.json` with:
 
 API runs at: `http://localhost:5000`
 
+Tests: `dotnet test games/backend.Tests` (Docker must be running; each run starts a throwaway Postgres 17 and never calls Steam or IGDB).
+
 ### Frontend
 
 ```bash
@@ -118,7 +121,7 @@ Frontend runs at: `http://localhost:5173`
 | Frontend | GitHub Pages (`mittsmods.com`)   | Push to `main` (blog or `games/frontend/`)    |
 | Backend  | Docker Compose on a home server  | Manual: `docker compose up -d --build`        |
 
-`.github/workflows/deploy.yml` builds and deploys the blog and the game library together, so the two never race for the `gh-pages` branch. CI (`.github/workflows/ci.yml`) lints, tests and builds the frontend and builds the backend on every push and pull request, and fails if a model change has no migration.
+`.github/workflows/deploy.yml` builds and deploys the blog and the game library together, so the two never race for the `gh-pages` branch. CI (`.github/workflows/ci.yml`) lints, tests and builds the frontend, builds and tests the backend on every push and pull request, and fails if a model change has no migration.
 
 The API, Postgres, a nightly backup job and `cloudflared` run from [`docker-compose.yml`](docker-compose.yml). Nothing is
 exposed to the network; `api.mittsmods.com` reaches the API through the Cloudflare tunnel. Database migrations run when the API starts.

@@ -41,7 +41,7 @@ public class GamesController : ControllerBase
         if (!IsAdmin()) query = query.Where(g => !g.IsHidden);
         if (status != null)
         {
-            if (!Enum.TryParse<PlayStatus>(status, out var s) || !Enum.IsDefined(s)) return BadRequest($"Unknown status {status}.");
+            if (!TryParse<PlayStatus>(status, out var s)) return BadRequest($"Unknown status {status}.");
             query = query.Where(g => g.UserEntries.Any(e => e.Status == s));
         }
         var games = await query.OrderBy(g => g.Title).ToListAsync();
@@ -114,7 +114,7 @@ public class GamesController : ControllerBase
         PlayStatus? status = null;
         if (dto.Status != null)
         {
-            if (!Enum.TryParse<PlayStatus>(dto.Status, out var s)) return BadRequest($"Unknown status {dto.Status}.");
+            if (!TryParse<PlayStatus>(dto.Status, out var s)) return BadRequest($"Unknown status {dto.Status}.");
             status = s;
         }
         if (dto.PlatformId != null && !await _db.Platforms.AnyAsync(p => p.Id == dto.PlatformId))
@@ -166,6 +166,21 @@ public class GamesController : ControllerBase
             .FirstOrDefaultAsync(e => e.Id == entryId && e.GameId == gameId);
         if (entry == null) return NotFound();
 
+        // Check every value before changing anything, so a bad request saves nothing
+        PlayStatus? status = null;
+        if (dto.Status != null)
+        {
+            if (!TryParse<PlayStatus>(dto.Status, out var s)) return BadRequest($"Unknown status {dto.Status}.");
+            status = s;
+        }
+        HardwareType? hardware = null;
+        if (dto.Hardware != null)
+        {
+            if (!TryParse<HardwareType>(dto.Hardware, out var hw)) return BadRequest($"Unknown hardware {dto.Hardware}.");
+            hardware = hw;
+        }
+        if (!TryParseMode(dto.Mode, out var mode)) return BadRequest($"Unknown mode {dto.Mode}.");
+
         if (dto.PlatformId.HasValue && dto.PlatformId != entry.PlatformId)
         {
             // The Steam entry is the game's Steam copy, so it's always PC
@@ -177,8 +192,7 @@ public class GamesController : ControllerBase
             entry.PlatformId = dto.PlatformId.Value;
         }
 
-        if (dto.Hardware != null && Enum.TryParse<HardwareType>(dto.Hardware, out var hw))
-            entry.Hardware = hw;
+        if (hardware != null) entry.Hardware = hardware.Value;
 
         // PUT replaces the optional fields: null clears them, so clients send the full entry
         entry.HoursPlayed        = dto.HoursPlayed;
@@ -186,13 +200,12 @@ public class GamesController : ControllerBase
         entry.Notes              = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes;
         entry.AchievementsEarned = dto.AchievementsEarned;
         entry.AchievementsTotal  = dto.AchievementsTotal;
-        entry.Mode               = Enum.TryParse<PlayMode>(dto.Mode, out var m) ? m : null;
+        entry.Mode               = mode;
         entry.StartedAt          = dto.StartedAt;
         entry.CompletedAt        = dto.CompletedAt;
 
         // After the dates, so a status change only fills dates that are still empty
-        if (dto.Status != null && Enum.TryParse<PlayStatus>(dto.Status, out var status))
-            entry.SetStatus(status);
+        if (status != null) entry.SetStatus(status.Value);
 
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -241,10 +254,12 @@ public class GamesController : ControllerBase
         if (!await _db.Platforms.AnyAsync(p => p.Id == dto.PlatformId))
             return (null, $"Platform with ID {dto.PlatformId} does not exist.");
 
-        if (!Enum.TryParse<PlayStatus>(dto.Status, out var status))
-            status = PlayStatus.Backlog;
-        if (!Enum.TryParse<HardwareType>(dto.Hardware, out var hardware))
-            hardware = HardwareType.Original;
+        if (!TryParse<PlayStatus>(dto.Status ?? "Backlog", out var status))
+            return (null, $"Unknown status {dto.Status}.");
+        if (!TryParse<HardwareType>(dto.Hardware ?? "Original", out var hardware))
+            return (null, $"Unknown hardware {dto.Hardware}.");
+        if (!TryParseMode(dto.Mode, out var mode))
+            return (null, $"Unknown mode {dto.Mode}.");
 
         var entry = new UserEntry
         {
@@ -254,7 +269,7 @@ public class GamesController : ControllerBase
             Notes              = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes,
             AchievementsEarned = dto.AchievementsEarned,
             AchievementsTotal  = dto.AchievementsTotal,
-            Mode               = Enum.TryParse<PlayMode>(dto.Mode, out var mode) ? mode : null,
+            Mode               = mode,
             Hardware           = hardware,
             StartedAt          = dto.StartedAt,
             CompletedAt        = dto.CompletedAt,
@@ -274,6 +289,24 @@ public class GamesController : ControllerBase
             _logger.LogWarning("IGDB time to beat failed: {Message}", ex.Message);
             return null;
         }
+    }
+
+    // Names only: Enum.TryParse alone also takes numbers ("99", "1"), which would store or match
+    // a status that doesn't exist
+    private static bool TryParse<T>(string? s, out T value) where T : struct, Enum
+    {
+        value = default;
+        return s != null && Enum.GetNames<T>().Contains(s) && Enum.TryParse(s, out value);
+    }
+
+    // null or "" = no mode
+    private static bool TryParseMode(string? s, out PlayMode? mode)
+    {
+        mode = null;
+        if (string.IsNullOrEmpty(s)) return true;
+        if (!TryParse<PlayMode>(s, out var m)) return false;
+        mode = m;
+        return true;
     }
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
