@@ -1,5 +1,5 @@
 /* games/frontend/src/index.css */
-@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap");
+/* Fonts are linked from index.html: a CSS @import would wait for this file before starting */
 
 /* --- Tokens --- */
 :root {
@@ -12,8 +12,9 @@
   --border-2: #333340;
 
   --text: #e8e8f0;
-  --text-muted: #888899;
-  --text-faint: #44444f;
+  /* Both pass WCAG AA (4.5:1) on every background below; check before darkening them */
+  --text-muted: #a1a1b0;
+  --text-faint: #8a8a99;
 
   --blue: #007acc;
   --blue-bright: #1a8fe0;
@@ -45,6 +46,10 @@
 }
 html {
   scroll-behavior: smooth;
+  /* The app has its own pull to refresh; this stops Chrome on Android doing a second, full reload */
+  overscroll-behavior-y: contain;
+  /* Room for the scrollbar even when a sheet hides it, so the page doesn't shift sideways */
+  scrollbar-gutter: stable;
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -466,7 +471,7 @@ img {
 
 .status-badge {
   font-family: var(--font-mono);
-  font-size: 0.5625rem;
+  font-size: 0.625rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 2px 6px;
@@ -1598,7 +1603,7 @@ body:has(.modal-overlay) {
   margin-bottom: 14px;
 }
 
-/* Pull to refresh */
+/* Pull to refresh; App.tsx sets --pull (0-80) as the finger drags */
 .ptr {
   display: flex;
   align-items: center;
@@ -1606,10 +1611,24 @@ body:has(.modal-overlay) {
   overflow: hidden;
   color: var(--blue-bright);
   font-size: 1.25rem;
+  height: calc(var(--pull, 0) * 1px);
   transition: height 0.2s;
 }
-.ptr .spinning {
+.ptr span {
+  transform: rotate(calc(var(--pull, 0) * 4deg));
+  opacity: calc(var(--pull, 0) / 60);
+}
+.ptr.refreshing {
+  height: 44px;
+}
+.ptr.refreshing span {
+  opacity: 1;
   animation: spin 0.8s linear infinite;
+}
+
+/* The page behind an open sheet doesn't scroll */
+html:has(.modal-overlay) {
+  overflow: hidden;
 }
 @keyframes spin {
   to {
@@ -1694,7 +1713,7 @@ body:has(.bulk-bar) .toast {
   /* --- Tab bar --- */
   .tabbar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     position: fixed;
     left: 0;
     right: 0;
@@ -2040,9 +2059,6 @@ body:has(.bulk-bar) .toast {
 
 /* New features on phones */
 @media (max-width: 768px), (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  .tabbar {
-    grid-template-columns: repeat(5, 1fr);
-  }
   .toolbar-buttons {
     grid-column: 1 / -1;
   }
@@ -2204,7 +2220,7 @@ body:has(.bulk-bar) .toast {
 @media (prefers-reduced-motion: reduce) {
   .skeleton .game-card-cover-placeholder,
   .skeleton-line,
-  .ptr .spinning {
+  .ptr.refreshing span {
     animation: none;
   }
   *,

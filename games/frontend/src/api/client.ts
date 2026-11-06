@@ -126,6 +126,15 @@ export type UpdateEntryPayload = Partial<
   >
 >;
 
+// A non-2xx response; callers check .status (409 = duplicate or sync already running)
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, body: string) {
+    super(`API error ${status}: ${body}`);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   // Writes are rejected by the API without the admin token
   const token = localStorage.getItem(TOKEN_KEY);
@@ -141,7 +150,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     localStorage.removeItem(TOKEN_KEY);
     window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new ApiError(res.status, await res.text());
   if (res.status === 204) return undefined as T;
   return res.json();
 }

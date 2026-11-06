@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
+  ApiError,
   type CreateGamePayload,
   type Game,
   type GameDetails,
@@ -95,7 +96,7 @@ export function useLibrary(notify: Notify) {
       notify(`Added ${g.title}`);
       return true;
     } catch (e) {
-      const dupe = e instanceof Error && e.message.startsWith("API error 409");
+      const dupe = e instanceof ApiError && e.status === 409;
       notify(dupe ? "That Steam game is already in the library." : "Couldn't add the game. Check you're still logged in and try again.", false);
       return false;
     }
@@ -152,9 +153,13 @@ export function useLibrary(notify: Notify) {
 
   const setPlatform = async (list: Game[], platformId: number) => {
     try {
-      replaceMany(await api.bulk({ ids: list.map((g) => g.id), platformId }));
+      const fresh = await api.bulk({ ids: list.map((g) => g.id), platformId });
+      replaceMany(fresh);
+      // The API skips Steam entries (always PC) and games already logged on that platform
+      const moved = fresh.filter((g) => entryOf(g)?.platformId === platformId).length;
       const name = platforms.find((p) => p.id === platformId)?.name ?? "that platform";
-      notify(`${plural(list.length, "game")} moved to ${name}`);
+      const skipped = list.length - moved;
+      notify(`${plural(moved, "game")} moved to ${name}${skipped ? `, ${skipped} skipped` : ""}`);
       return true;
     } catch {
       notify("Couldn't change the platform. Try again.", false);
@@ -223,7 +228,7 @@ export function useLibrary(notify: Notify) {
       notify(`Added a platform to ${g.title}`);
       return true;
     } catch (e) {
-      const dupe = e instanceof Error && e.message.includes("already logged on that platform");
+      const dupe = e instanceof ApiError && e.status === 409;
       notify(dupe ? `${g.title} is already logged on that platform.` : "Couldn't add the platform. Try again.", false);
       return false;
     }

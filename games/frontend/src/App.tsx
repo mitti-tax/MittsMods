@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Game } from "./api/client";
+import { api, ApiError, type Game } from "./api/client";
 import AddGameSheet from "./components/AddGameSheet";
 import GameSheet from "./components/GameSheet";
 import LoginModal from "./components/LoginModal";
 import PickSheet from "./components/PickSheet";
 import { EmptyLibrary, ErrorState, LoadingState } from "./components/States";
 import { useAuth } from "./hooks/useAuth";
-import { useEscape } from "./hooks/useEscape";
+import { useSheet } from "./hooks/useSheet";
 import { useLibrary } from "./hooks/useLibrary";
 import { DEFAULT_FILTER, filterFromParams, filterToParams, toCsv, type LibraryFilter } from "./lib/games";
 import Dashboard from "./pages/Dashboard";
@@ -118,7 +118,7 @@ function App() {
 
   const navigate = (p: Page, params?: URLSearchParams) => {
     if (p !== page || params) go({ page: p, params: params ?? memory.current[p] ?? new URLSearchParams() }, "push");
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: "instant" }); // a tab switch jumps, it doesn't scroll
   };
 
   const base = BASE_FILTER[page];
@@ -146,7 +146,7 @@ function App() {
       notify(`Synced: ${result.added} added, ${result.updated} updated`);
       lib.load();
     } catch (e) {
-      const running = e instanceof Error && e.message.startsWith("API error 409");
+      const running = e instanceof ApiError && e.status === 409;
       notify(running ? "A sync is already running" : "Steam sync failed", false);
     } finally {
       setSyncing(false);
@@ -189,7 +189,7 @@ function App() {
   }, []);
 
   // Pull to refresh on touch screens
-  const [pull, setPull] = useState(0);
+  const ptrRef = useRef<HTMLDivElement>(null);
   const refresh = useRef(lib.load);
   useEffect(() => {
     refresh.current = lib.load;
@@ -198,6 +198,8 @@ function App() {
     if (!window.matchMedia("(pointer: coarse)").matches) return;
     let startY: number | null = null;
     let dist = 0;
+    // Set straight on the element (a CSS variable), not React state: no re-render per touchmove
+    const setPull = (px: number) => ptrRef.current?.style.setProperty("--pull", String(px));
     const start = (e: TouchEvent) => {
       const atTop = window.scrollY <= 0 && !document.querySelector(".modal-overlay");
       startY = atTop ? e.touches[0].clientY : null;
@@ -313,10 +315,8 @@ function App() {
 
       {/* Main content */}
       <main className="main">
-        <div className="ptr" style={{ height: lib.refreshing ? 44 : pull }} aria-hidden={!lib.refreshing}>
-          <span className={lib.refreshing ? "spinning" : ""} style={{ transform: `rotate(${pull * 4}deg)`, opacity: lib.refreshing ? 1 : pull / 60 }}>
-            ⟳
-          </span>
+        <div ref={ptrRef} className={`ptr ${lib.refreshing ? "refreshing" : ""}`} aria-hidden={!lib.refreshing}>
+          <span>⟳</span>
         </div>
         <h1 className="large-title">{PAGE_TITLES[page]}</h1>
         {content}
@@ -444,10 +444,10 @@ function AccountSheet({
   onLogin: () => void;
   onLogout: () => void;
 }) {
-  useEscape(onClose);
+  useSheet(onClose);
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="action-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="action-sheet" role="dialog" aria-modal="true" aria-label="Account" onClick={(e) => e.stopPropagation()}>
         <div className="action-group">
           {isLoggedIn && (
             <button className="action" onClick={onSync} disabled={syncing}>

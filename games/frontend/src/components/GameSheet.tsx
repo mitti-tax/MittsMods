@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Game, GameDetails, HardwareType, Platform, PlayMode, UserEntry } from "../api/client";
-import { useEscape } from "../hooks/useEscape";
+import { useSheet } from "../hooks/useSheet";
 import type { Library } from "../hooks/useLibrary";
 import {
   STATUS_LABEL,
@@ -70,7 +70,7 @@ export default function GameSheet({
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState<"delete" | "removeEntry" | null>(null);
   const back = () => setMode({ kind: "view" });
-  useEscape(() => (mode.kind === "view" ? onClose() : back()));
+  useSheet(() => (mode.kind === "view" ? onClose() : back()));
 
   const run = async (job: () => Promise<boolean>) => {
     setSaving(true);
@@ -131,7 +131,12 @@ export default function GameSheet({
     );
     body = (
       <>
-        <EntryFields draft={mode.draft} onChange={(draft) => setMode({ ...mode, draft })} platforms={platforms} />
+        <EntryFields
+          draft={mode.draft}
+          onChange={(draft) => setMode({ ...mode, draft })}
+          platforms={platforms}
+          steam={!adding && entry.source === "Steam"}
+        />
         {/* The Steam entry stays: sync updates the game through it */}
         {!adding && game.userEntries.length > 1 && entry.source !== "Steam" && (
           <button className="btn btn-danger btn-block" onClick={() => setConfirm("removeEntry")}>
@@ -426,7 +431,7 @@ export default function GameSheet({
 
   return (
     <div className="modal-overlay" onClick={mode.kind === "view" ? onClose : undefined}>
-      <div className="modal" role="dialog" aria-label={game.title} onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={game.title} onClick={(e) => e.stopPropagation()}>
         {header}
         <div className="modal-body">{body}</div>
       </div>

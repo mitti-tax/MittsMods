@@ -1,5 +1,5 @@
 import type { Game, PlayStatus } from "../api/client";
-import { STATUSES, STATUS_LABEL, entryOf, fmtHours } from "../lib/games";
+import { STATUSES, STATUS_LABEL, entryOf, fmtHours, totalHours } from "../lib/games";
 import Cover from "./Cover";
 
 export default function GameCard({
@@ -15,6 +15,7 @@ export default function GameCard({
 }) {
   const entry = entryOf(game);
   const selecting = selected !== undefined;
+  const hours = totalHours(game); // every platform, matching the Most played sort
   return (
     <div
       className={`game-card ${selected ? "selected" : ""} ${game.isHidden ? "is-hidden" : ""}`}
@@ -59,7 +60,7 @@ export default function GameCard({
             ) : (
               <span className={`status-badge status-${entry.status}`}>{STATUS_LABEL[entry.status]}</span>
             )}
-            {entry.hoursPlayed ? <span className="game-card-hours">{fmtHours(entry.hoursPlayed)}</span> : null}
+            {hours ? <span className="game-card-hours">{fmtHours(hours)}</span> : null}
           </div>
         )}
       </div>

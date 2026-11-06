@@ -11,6 +11,7 @@ interface Props {
 
 export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
   const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false); // while hovered or focused, so it can be read
   const games = owned(all); // hidden and wishlist games stay out of the dashboard
 
   const slideshowGames = sortGames(
@@ -22,10 +23,12 @@ export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
 
   useEffect(() => {
     // No auto-advance under Reduce Motion
-    if (count < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (count < 2 || paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = setInterval(() => setSlide((s) => (s + 1) % count), 4000);
     return () => clearInterval(timer);
-  }, [count]);
+  }, [count, paused]);
+  // Only the current slide and its neighbours load their cover, not all eight at once
+  const near = (i: number) => [0, 1, count - 1].includes((i - active + count) % count);
 
   const totalGames = games.length;
   const completed = games.filter((g) => g.userEntries.some((e) => e.status === "Completed")).length;
@@ -43,7 +46,13 @@ export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
     <>
       {/* Slideshow */}
       {count > 0 && (
-        <div className="hero-slideshow">
+        <div
+          className="hero-slideshow"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+        >
           {slideshowGames.map((g, i) => (
             <button
               key={g.id}
@@ -52,8 +61,12 @@ export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
               onClick={() => onOpen(g)}
               aria-label={g.title}
             >
-              <img src={g.coverUrl!} className="slide-bg" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-              <img src={g.coverUrl!} className="slide-cover" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+              {near(i) && (
+                <>
+                  <img src={g.coverUrl!} className="slide-bg" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+                  <img src={g.coverUrl!} className="slide-cover" alt="" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+                </>
+              )}
               <span className="slide-info">
                 <span className="slide-title">{g.title}</span>
                 <span className="slide-meta">

@@ -6,10 +6,12 @@ export default function EntryFields({
   draft,
   onChange,
   platforms,
+  steam = false,
 }: {
   draft: EntryDraft;
   onChange: (d: EntryDraft) => void;
   platforms: Platform[];
+  steam?: boolean; // the Steam entry: its platform is always PC
 }) {
   const set = (patch: Partial<EntryDraft>) => onChange({ ...draft, ...patch });
   const error = draftError(draft);
@@ -26,6 +28,8 @@ export default function EntryFields({
             className="form-select"
             value={draft.platformId}
             onChange={(e) => set({ platformId: Number(e.target.value) })}
+            disabled={steam}
+            title={steam ? "Steam games stay on PC" : undefined}
           >
             {platforms.map((p) => (
               <option key={p.id} value={p.id}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEscape } from "../hooks/useEscape";
+import { useSheet } from "../hooks/useSheet";
 import SheetHeader from "./SheetHeader";
 
 interface Props {
@@ -12,7 +12,7 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  useEscape(onClose);
+  useSheet(onClose);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -35,7 +35,7 @@ export default function LoginModal({ onClose, onSuccess, login }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-narrow" role="dialog" aria-label="Admin Login" onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-narrow" role="dialog" aria-modal="true" aria-label="Admin Login" onClick={(e) => e.stopPropagation()}>
         <SheetHeader
           title="Admin Login"
           onCancel={onClose}

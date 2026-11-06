@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Game } from "../api/client";
-import { useEscape } from "../hooks/useEscape";
+import { useSheet } from "../hooks/useSheet";
 import Cover from "./Cover";
 
 const pickFrom = (pool: Game[], not?: Game) => {
@@ -10,12 +10,12 @@ const pickFrom = (pool: Game[], not?: Game) => {
 
 // "What should I play?": a random game from the backlog, re-rollable
 export default function PickSheet({ pool, onOpen, onClose }: { pool: Game[]; onOpen: (g: Game) => void; onClose: () => void }) {
-  useEscape(onClose);
+  useSheet(onClose);
   const [pick, setPick] = useState(() => pickFrom(pool));
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-narrow" role="dialog" aria-label="What should I play?" onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-narrow" role="dialog" aria-modal="true" aria-label="What should I play?" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">What should I play?</span>
           <button className="modal-close" onClick={onClose} aria-label="Close">

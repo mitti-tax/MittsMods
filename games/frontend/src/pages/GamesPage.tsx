@@ -15,6 +15,7 @@ import {
   matches,
   playtimeTotal,
   sortGames,
+  totalHours,
   type LibraryFilter,
   type SortKey,
   type StatusFilter,
@@ -344,6 +345,7 @@ function GameTable({
         {games.map((g) => {
           const e = entryOf(g);
           const isSel = selected?.has(g.id);
+          const played = lastPlayed(g);
           return (
             <tr
               key={g.id}
@@ -373,9 +375,9 @@ function GameTable({
               </td>
               <td className="col-wide">{g.userEntries.map((x) => x.platformName).join(", ")}</td>
               <td>{e && <span className={`status-badge status-${e.status}`}>{STATUS_LABEL[e.status]}</span>}</td>
-              <td className="col-num">{fmtHours(e?.hoursPlayed)}</td>
+              <td className="col-num">{fmtHours(totalHours(g))}</td>
               <td className="col-num col-wide">{e?.rating ? `${e.rating}/10` : ""}</td>
-              <td className="col-wide">{lastPlayed(g) ? fmtDate(new Date(lastPlayed(g)).toISOString()) : "Never"}</td>
+              <td className="col-wide">{played ? fmtDate(new Date(played).toISOString()) : "Never"}</td>
             </tr>
           );
         })}

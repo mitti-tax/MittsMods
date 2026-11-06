@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CreateGamePayload, Game, IgdbResult, Platform } from "../api/client";
-import { useEscape } from "../hooks/useEscape";
+import { useSheet } from "../hooks/useSheet";
 import { draftError, emptyDraft, newEntry, type EntryDraft } from "../lib/games";
 import EntryFields from "./EntryFields";
 import IgdbSearch from "./IgdbSearch";
@@ -19,7 +19,7 @@ export default function AddGameSheet({
   onOpen: (g: Game) => void;
   onClose: () => void;
 }) {
-  useEscape(onClose);
+  useSheet(onClose);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<IgdbResult | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,7 +52,7 @@ export default function AddGameSheet({
 
   return (
     <div className="modal-overlay">
-      <div className="modal" role="dialog" aria-label="Add Game">
+      <div className="modal" role="dialog" aria-modal="true" aria-label="Add Game">
         <SheetHeader
           title="Add Game"
           onCancel={onClose}

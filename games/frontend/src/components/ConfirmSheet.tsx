@@ -1,4 +1,4 @@
-import { useEscape } from "../hooks/useEscape";
+import { useSheet } from "../hooks/useSheet";
 
 // Destructive confirmation: action sheet on phones, small dialog on desktop
 export default function ConfirmSheet({
@@ -14,7 +14,7 @@ export default function ConfirmSheet({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  useEscape(onCancel);
+  useSheet(onCancel);
   return (
     <div
       className="modal-overlay"
@@ -26,6 +26,7 @@ export default function ConfirmSheet({
       <div
         className="action-sheet"
         role="alertdialog"
+        aria-modal="true"
         aria-labelledby="confirm-title"
         onClick={(e) => e.stopPropagation()}
       >

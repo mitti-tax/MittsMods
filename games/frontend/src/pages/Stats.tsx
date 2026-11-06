@@ -56,7 +56,7 @@ export default function Stats({ games: all, onOpen, onSeeAll }: Props) {
   // Year in review, from the dates logged when a game is started or finished
   const years = [
     ...new Set(
-      entries.flatMap(({ e }) => [yearOf(e.startedAt), yearOf(e.completedAt), ...(e.history ?? []).map((h) => yearOf(h.changedAt))]),
+      entries.flatMap(({ e }) => [yearOf(e.startedAt), yearOf(e.completedAt)]),
     ),
   ]
     .filter((y): y is number => !!y)
