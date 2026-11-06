@@ -36,10 +36,13 @@ export function useLibrary(notify: Notify) {
   const [platforms, setPlatforms] = useState<Platform[]>(cache?.platforms ?? []);
   const [state, setState] = useState<"loading" | "ready" | "error">(cache ? "ready" : "loading");
   const [refreshing, setRefreshing] = useState(true); // the first load starts straight away
+  const [syncedAt, setSyncedAt] = useState<string | null>(null);
 
   // After the first load, a failed refresh keeps what's on screen instead of an error page
   const loaded = useRef(!!cache);
   const fetchAll = useCallback(() => {
+    // Extra info: the library loads fine without it
+    api.steamStatus().then((s) => setSyncedAt(s.lastSyncedAt), () => {});
     return Promise.all([api.getGames(), api.getPlatforms()])
       .then(([g, p]) => {
         setGames(g);
@@ -246,7 +249,7 @@ export function useLibrary(notify: Notify) {
   };
 
   return {
-    games, platforms, state, refreshing, load, retry, add, update, setStatus, setPlatform, setHidden,
+    games, platforms, syncedAt, state, refreshing, load, retry, add, update, setStatus, setPlatform, setHidden,
     remove, toggleFavourite, updateDetails, addEntry, removeEntry,
   };
 }

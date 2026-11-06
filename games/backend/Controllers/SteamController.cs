@@ -12,4 +12,8 @@ public class SteamController(SteamSync sync) : ControllerBase
     [HttpPost("sync")]
     public async Task<ActionResult<SteamSyncResult>> Sync() =>
         await sync.RunAsync() is { } result ? Ok(result) : Conflict("A Steam sync is already running.");
+
+    // GET /api/steam/status: when the library last synced (public, for the "last updated" line)
+    [HttpGet("status")]
+    public SteamStatus Status() => new(SteamSync.LastSyncedAt);
 }

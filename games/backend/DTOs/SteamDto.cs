@@ -35,3 +35,5 @@ public class SteamSyncResult
     public int MovedToBacklog { get; set; } // Playing games not played for two weeks
     public List<string> Games { get; set; } = new();
 }
+
+public record SteamStatus(DateTime? LastSyncedAt);

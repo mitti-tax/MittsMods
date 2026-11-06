@@ -193,6 +193,8 @@ export const api = {
       movedToBacklog?: number; // Playing games not played for two weeks
       games: string[];
     }>("/api/steam/sync", { method: "POST" }),
+  // When the Steam library last synced (runs every 6 hours)
+  steamStatus: () => request<{ lastSyncedAt: string | null }>("/api/steam/status"),
   toggleFavourite: (id: number) =>
     request<Game>(`/api/games/${id}/favourite`, { method: "PATCH" }),
 };

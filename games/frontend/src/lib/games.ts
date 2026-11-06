@@ -25,6 +25,16 @@ export const fmtDate = (s: string | null | undefined) =>
 
 export const totalHours = (g: Game) => g.userEntries.reduce((s, e) => s + (e.hoursPlayed ?? 0), 0);
 
+// "5 minutes ago", "yesterday"
+const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+export function ago(iso: string, now = Date.now()): string {
+  const minutes = Math.round((now - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return relative.format(-minutes, "minute");
+  if (minutes < 60 * 24) return relative.format(-Math.round(minutes / 60), "hour");
+  return relative.format(-Math.round(minutes / (60 * 24)), "day");
+}
+
 const time = (s: string | null | undefined) => (s ? new Date(s).getTime() : 0);
 
 // Steam's last-played date; a manual entry's last edit stands in for it.

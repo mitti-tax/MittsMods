@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import type { Game } from "../api/client";
 import GameCard from "../components/GameCard";
-import { STATUS_LABEL, entryOf, fmtHours, owned, sortGames, totalHours, type LibraryFilter } from "../lib/games";
+import { STATUS_LABEL, ago, entryOf, fmtDate, fmtHours, owned, sortGames, totalHours, type LibraryFilter } from "../lib/games";
 
 interface Props {
   games: Game[];
   onOpen: (g: Game) => void;
   onSeeAll: (f: Partial<LibraryFilter>) => void;
+  syncedAt: string | null; // last Steam sync
 }
 
-export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
+export default function Dashboard({ games: all, onOpen, onSeeAll, syncedAt }: Props) {
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false); // while hovered or focused, so it can be read
   const games = owned(all); // hidden and wishlist games stay out of the dashboard
@@ -112,6 +113,11 @@ export default function Dashboard({ games: all, onOpen, onSeeAll }: Props) {
           <div className="stat-label">Playing Now</div>
         </button>
       </div>
+      {syncedAt && (
+        <p className="sync-status" title={fmtDate(syncedAt)}>
+          Steam library updated {ago(syncedAt)}
+        </p>
+      )}
 
       {playingGames.length > 0 && (
         <div className="section">

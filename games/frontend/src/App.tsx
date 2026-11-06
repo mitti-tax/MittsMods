@@ -234,7 +234,7 @@ function App() {
   else if (lib.state === "error") content = <ErrorState onRetry={lib.retry} />;
   else if (lib.games.length === 0)
     content = <EmptyLibrary isLoggedIn={isLoggedIn} onAdd={() => setShowAdd(true)} onSync={handleSync} />;
-  else if (page === "dashboard") content = <Dashboard games={lib.games} onOpen={openGame} onSeeAll={seeAll} />;
+  else if (page === "dashboard") content = <Dashboard games={lib.games} onOpen={openGame} onSeeAll={seeAll} syncedAt={lib.syncedAt} />;
   else if (page === "stats") content = <Stats games={lib.games} onOpen={openGame} onSeeAll={seeAll} />;
   else
     content = (

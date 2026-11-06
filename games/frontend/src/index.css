@@ -344,6 +344,14 @@ img {
   text-transform: uppercase;
 }
 
+.sync-status {
+  margin: 0;
+  padding: 10px 32px 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+}
+
 /* --- Section --- */
 .section {
   padding: 32px 32px;
@@ -1808,6 +1816,9 @@ body:has(.bulk-bar) .toast {
   /* --- Library --- */
   .section {
     padding: 20px 16px;
+  }
+  .sync-status {
+    padding: 10px 16px 0;
   }
   .section-header {
     flex-wrap: wrap;

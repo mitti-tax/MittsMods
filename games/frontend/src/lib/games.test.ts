@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Game, UserEntry } from "../api/client";
 import {
+  ago,
   DEFAULT_FILTER,
   draftError,
   fromDay,
@@ -83,4 +84,14 @@ test("a picked day reads back as the same day", () => {
   for (const d of ["2026-01-01", "2026-03-05", "2026-12-31"]) assert.equal(toDay(fromDay(d)), d);
   assert.equal(toDay(null), "");
   assert.equal(fromDay(""), null);
+});
+
+test("ago: says how long ago the library synced", () => {
+  const now = Date.parse("2026-11-06T12:00:00Z");
+  const at = (minutes: number) => new Date(now - minutes * 60000).toISOString();
+  assert.equal(ago(at(0.4), now), "just now");
+  assert.equal(ago(at(5), now), "5 minutes ago");
+  assert.equal(ago(at(150), now), "3 hours ago");
+  assert.equal(ago(at(60 * 24), now), "yesterday");
+  assert.equal(ago(at(60 * 24 * 3), now), "3 days ago");
 });

@@ -16,6 +16,10 @@ public class SteamSync(SteamService steam, AppDbContext db, IgdbService igdb, IL
 {
     public static readonly TimeSpan StaleAfter = TimeSpan.FromDays(14);
 
+    // When the last sync finished, shown as "last updated" in the app.
+    // ponytail: in memory, so it's empty after a restart until the startup sync finishes (seconds)
+    public static DateTime? LastSyncedAt { get; private set; }
+
     // Only one sync at a time: two overlapping syncs both see the same games as "new" and add them twice
     private static readonly SemaphoreSlim Lock = new(1, 1);
 
@@ -146,6 +150,7 @@ public class SteamSync(SteamService steam, AppDbContext db, IgdbService igdb, IL
         }
 
         await db.SaveChangesAsync();
+        LastSyncedAt = DateTime.UtcNow;
         return result;
     }
 
