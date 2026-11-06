@@ -65,6 +65,7 @@ ul {
 img {
   display: block;
   max-width: 100%;
+  height: auto; /* keeps the width/height attributes' shape, which reserves the space before load */
 }
 
 /* --- Layout --- */

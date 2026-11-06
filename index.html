@@ -198,7 +198,8 @@
       </div>
     </footer>
     <script>
-      fetch("https://api.mittsmods.com/api/games")
+      // Only Playing games (an older API ignores the filter; the .filter below still applies)
+      fetch("https://api.mittsmods.com/api/games?status=Playing")
         .then((r) => (r.ok ? r.json() : []))
         .then((games) => {
           const played = (g) => Date.parse(g.userEntries[0]?.lastPlayedAt || g.userEntries[0]?.updatedAt || 0) || 0;
