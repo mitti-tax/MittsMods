@@ -143,7 +143,11 @@ function App() {
     setSyncing(true);
     try {
       const result = await api.syncSteam();
-      notify(`Synced: ${result.added} added, ${result.updated} updated`);
+      const moves = [
+        result.movedToPlaying && `${result.movedToPlaying} to Playing`,
+        result.movedToBacklog && `${result.movedToBacklog} back to Backlog`,
+      ].filter(Boolean);
+      notify(`Synced: ${[`${result.added} added`, `${result.updated} updated`, ...moves].join(", ")}`);
       lib.load();
     } catch (e) {
       const running = e instanceof ApiError && e.status === 409;

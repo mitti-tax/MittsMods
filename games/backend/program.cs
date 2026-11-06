@@ -11,6 +11,8 @@ builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<SteamService>();
+builder.Services.AddScoped<SteamSync>();
+builder.Services.AddHostedService<SteamSyncJob>();
 
 // DATABASE_URL (key=value, set by docker-compose) or appsettings for local runs
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")

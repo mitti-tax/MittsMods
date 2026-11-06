@@ -21,7 +21,7 @@ A personal game tracking and logging application. Tracks every game played acros
 
 ## Features
 
-- **Steam sync**: imports the library with hours, last-played dates and achievements. Games played in the last two weeks come in as Playing, the rest as Backlog. Later syncs move a Backlog game to Playing when Steam shows recent playtime, and never touch any other status you've set.
+- **Steam sync**: imports the library with hours, last-played dates and achievements. Runs by itself when the API starts and every 6 hours, or on demand with Sync Steam. Games played in the last two weeks come in as Playing, the rest as Backlog. Later syncs move a Backlog game to Playing when Steam shows recent playtime, and a Playing game back to Backlog after two weeks without play (unless it was set to Playing within those two weeks). Other statuses you've set are never touched.
 - **IGDB integration**: cover art, genres, developers and typical time to beat. "Edit Details" re-matches a game that IGDB got wrong; syncs never overwrite stored details, so your fixes stay.
 - **Personal log**: status (Backlog / Playing / Completed / Dropped / On hold / Wishlist), hours, rating (tap the stars), notes, play mode, hardware, and start/finish dates that fill themselves in. Every status change is kept as history.
 - **Several platforms per game**: log the same game on PC and Switch, each with its own hours and status.

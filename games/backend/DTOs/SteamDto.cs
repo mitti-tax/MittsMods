@@ -31,5 +31,7 @@ public class SteamSyncResult
     public int Added { get; set; }
     public int Updated { get; set; }
     public int Skipped { get; set; }
+    public int MovedToPlaying { get; set; }
+    public int MovedToBacklog { get; set; } // Playing games not played for two weeks
     public List<string> Games { get; set; } = new();
 }

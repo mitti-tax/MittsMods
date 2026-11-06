@@ -189,6 +189,8 @@ export const api = {
       added: number;
       updated: number;
       skipped: number;
+      movedToPlaying?: number;
+      movedToBacklog?: number; // Playing games not played for two weeks
       games: string[];
     }>("/api/steam/sync", { method: "POST" }),
   toggleFavourite: (id: number) =>
