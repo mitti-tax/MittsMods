@@ -62,6 +62,15 @@ public static class AdminToken
     public static string? Secret(IConfiguration config) =>
         config["AdminPassword"] ?? config["ADMIN_PASSWORD"];
 
+    // True when the request carries a valid "Authorization: Bearer <token>" header
+    public static bool IsAdmin(HttpContext ctx)
+    {
+        var secret = Secret(ctx.RequestServices.GetRequiredService<IConfiguration>());
+        var header = ctx.Request.Headers.Authorization.ToString();
+        return !string.IsNullOrEmpty(secret) && header.StartsWith("Bearer ")
+            && IsValid(header["Bearer ".Length..], secret);
+    }
+
     public static string Create(string secret)
     {
         var expiry = DateTimeOffset.UtcNow.Add(Lifetime).ToUnixTimeSeconds().ToString();

@@ -31,19 +31,19 @@ public class GamesController : ControllerBase
     private Task<Game?> Load(int id) => WithEntries().FirstOrDefaultAsync(g => g.Id == id);
 
     // Hidden games (incl. "deleted" Steam games) are only shown to the admin
-    private bool IsAdmin()
-    {
-        var secret = AdminToken.Secret(HttpContext.RequestServices.GetRequiredService<IConfiguration>());
-        var header = Request.Headers.Authorization.ToString();
-        return !string.IsNullOrEmpty(secret) && header.StartsWith("Bearer ")
-            && AdminToken.IsValid(header["Bearer ".Length..], secret);
-    }
+    private bool IsAdmin() => AdminToken.IsAdmin(HttpContext);
 
+    // GET /api/games?status=Playing: only games with an entry in that status (the blog's Now Playing)
     [HttpGet]
-    public async Task<ActionResult<List<GameDto>>> GetAll()
+    public async Task<ActionResult<List<GameDto>>> GetAll([FromQuery] string? status)
     {
         var query = WithEntries();
         if (!IsAdmin()) query = query.Where(g => !g.IsHidden);
+        if (status != null)
+        {
+            if (!Enum.TryParse<PlayStatus>(status, out var s) || !Enum.IsDefined(s)) return BadRequest($"Unknown status {status}.");
+            query = query.Where(g => g.UserEntries.Any(e => e.Status == s));
+        }
         var games = await query.OrderBy(g => g.Title).ToListAsync();
         return Ok(games.Select(MapToDto).ToList());
     }
@@ -127,8 +127,10 @@ public class GamesController : ControllerBase
             var entry = game.UserEntries.OrderBy(e => e.Id).FirstOrDefault();
             if (entry == null || (status == null && dto.PlatformId == null)) continue;
             if (status != null) entry.SetStatus(status.Value);
-            // Skip if another entry already has that platform, so a game never lists it twice
-            if (dto.PlatformId is int pid && !game.UserEntries.Any(e => e != entry && e.PlatformId == pid))
+            // Skip if another entry already has that platform, so a game never lists it twice,
+            // and skip Steam entries: they stay on PC
+            if (dto.PlatformId is int pid && entry.Source != EntrySource.Steam
+                && !game.UserEntries.Any(e => e != entry && e.PlatformId == pid))
                 entry.PlatformId = pid;
             entry.UpdatedAt = DateTime.UtcNow;
         }
@@ -147,7 +149,7 @@ public class GamesController : ControllerBase
         var game = await _db.Games.FindAsync(id);
         if (game == null) return NotFound();
         if (await _db.UserEntries.AnyAsync(e => e.GameId == id && e.PlatformId == dto.PlatformId))
-            return BadRequest("This game is already logged on that platform.");
+            return Conflict("This game is already logged on that platform.");
 
         var (entry, error) = await BuildEntry(dto);
         if (entry == null) return BadRequest(error);
@@ -166,10 +168,12 @@ public class GamesController : ControllerBase
 
         if (dto.PlatformId.HasValue && dto.PlatformId != entry.PlatformId)
         {
+            // The Steam entry is the game's Steam copy, so it's always PC
+            if (entry.Source == EntrySource.Steam) return BadRequest("The Steam entry stays on PC.");
             var platform = await _db.Platforms.FindAsync(dto.PlatformId.Value);
             if (platform == null) return BadRequest($"Platform {dto.PlatformId.Value} not found.");
             if (await _db.UserEntries.AnyAsync(e => e.GameId == gameId && e.Id != entryId && e.PlatformId == dto.PlatformId))
-                return BadRequest("This game is already logged on that platform.");
+                return Conflict("This game is already logged on that platform.");
             entry.PlatformId = dto.PlatformId.Value;
         }
 

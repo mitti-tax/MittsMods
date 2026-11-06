@@ -12,13 +12,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<IgdbService>();
 builder.Services.AddHttpClient<SteamService>();
 
-// --- Connection string ---
-// DATABASE_URL may be a postgres:// URI (hosted Postgres) or key=value (docker-compose)
-// Npgsql needs it converted to key=value format
-var rawUrl = Environment.GetEnvironmentVariable("DATABASE_URL")
+// DATABASE_URL (key=value, set by docker-compose) or appsettings for local runs
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
-
-var connectionString = ConvertDatabaseUrl(rawUrl!);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -65,16 +61,11 @@ app.Use(async (ctx, next) =>
     var method = ctx.Request.Method;
     var isRead = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
     var path = ctx.Request.Path;
-    if ((!isRead && !path.StartsWithSegments("/api/auth")) || path.StartsWithSegments("/api/search"))
+    var needsAdmin = (!isRead && !path.StartsWithSegments("/api/auth")) || path.StartsWithSegments("/api/search");
+    if (needsAdmin && !AdminToken.IsAdmin(ctx))
     {
-        var secret = AdminToken.Secret(ctx.RequestServices.GetRequiredService<IConfiguration>());
-        var header = ctx.Request.Headers.Authorization.ToString();
-        var token = header.StartsWith("Bearer ") ? header["Bearer ".Length..] : null;
-        if (string.IsNullOrEmpty(secret) || !AdminToken.IsValid(token, secret))
-        {
-            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return;
-        }
+        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
     }
     await next();
 });
@@ -88,19 +79,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-static string ConvertDatabaseUrl(string url)
-{
-    if (!url.StartsWith("postgres://") && !url.StartsWith("postgresql://"))
-        return url; // already in Npgsql format
-
-    var uri = new Uri(url);
-    var userInfo = uri.UserInfo.Split(':');
-    var username = userInfo[0];
-    var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
-    var host     = uri.Host;
-    var port     = uri.Port > 0 ? uri.Port : 5432;
-    var database = uri.AbsolutePath.TrimStart('/');
-
-    return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
-}
