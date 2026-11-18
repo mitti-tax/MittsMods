@@ -1,0 +1,139 @@
+{
+  "date": "2026-11-18",
+  "slow_day": false,
+  "sections": [
+    {
+      "name": "Industry",
+      "stories": [
+        {
+          "headline": "Jensen Huang says he'd return as Nvidia CEO, but the board isn't considering it",
+          "points": [
+            "First statement since resigning last week: says he would be honoured to return if the board judged it in shareholders' interest, and takes responsibility for his mistakes",
+            "Three sources told Reuters the board is not weighing reinstatement; Nvidia has hired Heidrick & Struggles to find a permanent CEO",
+            "Board created a national security and export control committee; Huang testifies to House committees behind closed doors on 1 December",
+            "Nvidia has lost about US$2T (35%) of its value since its October peak and now sits behind Apple and Microsoft"
+          ],
+          "url": "https://www.itnews.com.au/news/huang-open-to-nvidia-return-630418",
+          "update": false
+        },
+        {
+          "headline": "US rule targets Chinese firms renting US AI chips through the cloud",
+          "points": [
+            "New Commerce Department rule restricts remote access to advanced US AI chips by Chinese companies, closing the cloud rental workaround",
+            "Nvidia warned customers they could face legal exposure under the rule",
+            "Commerce and DOJ also confirmed a criminal probe into Singapore's Megaspeed over possible diversion of restricted Nvidia chips"
+          ],
+          "url": "https://www.washingtonpost.com/technology/2026/11/16/trump-officials-issue-rule-restrict-sales-ai-chips-china/",
+          "update": false
+        },
+        {
+          "headline": "Optimizely supply-chain attack planted card skimmers on 178 sites, including Australian brands",
+          "points": [
+            "Attackers abused a flaw in Optimizely Web Experimentation's signup flow to inject JavaScript into customers' sites",
+            "Australian victims include Vodafone, TPG Telecom, HSBC Australia, Rest Super, Betashares and Levi's Australia",
+            "Payload skimmed card details from forms, swapped crypto wallet addresses and pushed unpatched iPhones to exploit kits",
+            "Live from 3:21pm AEDT Monday until most scripts were cleaned by 8:10am AEDT Tuesday"
+          ],
+          "url": "https://www.itnews.com.au/news/hijacked-website-testing-tool-plants-card-skimmer-on-australian-brands-sites-630407",
+          "update": false
+        },
+        {
+          "headline": "Anthropic guides IPO to the top of its US$70 to $78 range or above",
+          "points": [
+            "Top of range values Anthropic at about US$1.4T fully diluted and raises up to US$64.4B on Nasdaq under ticker ANT",
+            "Filing shows Amazon and Google will hold about 15% and 14% of the stock after listing",
+            "Seven chip and cloud suppliers, including Nvidia, Google and Microsoft, are buying US$26B of non-voting shares at the IPO price"
+          ],
+          "url": "https://www.bloomberg.com/news/articles/2026-11-17/anthropic-is-said-to-guide-ipo-price-to-top-of-range-or-above",
+          "update": false
+        }
+      ]
+    },
+    {
+      "name": "AI/ML",
+      "stories": [
+        {
+          "headline": "OpenAI ships GPT-6.2 Astra and Sol in ChatGPT, Codex and the API",
+          "points": [
+            "Astra is the flagship for hard projects; OpenAI says it is better at changing and testing existing codebases in Codex",
+            "Sol is the cheaper everyday model and scored within half a point of Astra on FrontierCode 2.0 at about a fifth of the cost",
+            "Astra API pricing is 20% lower than GPT-6 Astra; Sol keeps GPT-6.1 pricing",
+            "New Ultrafast mode generates up to 4.5x faster on Pro plans"
+          ],
+          "url": "https://9to5mac.com/2026/11/17/openai-upgrades-chatgpt-and-codex-with-new-gpt-6-2-astra-and-sol-models/",
+          "update": false
+        },
+        {
+          "headline": "Microsoft launches its own coding and security models at Ignite",
+          "points": [
+            "MAI Code 2 is pitched as nearly matching rival coding models at a fraction of the cost",
+            "A cyber security model goes to a limited set of customers to deal with the surge in AI-found vulnerabilities",
+            "Image generation and transcription models also released; a direct move to reduce reliance on OpenAI and Anthropic"
+          ],
+          "url": "https://www.itnews.com.au/news/microsoft-unveils-ai-models-for-coding-and-cyber-security-630419",
+          "update": false
+        },
+        {
+          "headline": "Google will keep history-off Gemini chats for two months instead of 72 hours",
+          "points": [
+            "Applies to temporary chats and chats with history turned off; rolling out globally over the coming weeks",
+            "Google cites safety and security; it says temporary chats still aren't used for training",
+            "Chat history and AI training are now separate settings, so you can keep history without allowing training",
+            "For comparison, ChatGPT and Claude keep temporary chats for up to 30 days"
+          ],
+          "url": "https://techcrunch.com/2026/11/17/google-to-keep-gemini-chats-for-two-months-up-from-72-hours-even-with-history-off/",
+          "update": false
+        }
+      ]
+    },
+    {
+      "name": "Dev tooling",
+      "stories": [
+        {
+          "headline": "macOS 27.3 tightens Full Disk Access as AI agents ask for more control",
+          "points": [
+            "Device Control and Data Access split into System & App Protection Override and Accessibility, making clear the first bypasses built-in protections",
+            "Apps can be set to ask permission every time, limiting an agent's standing access; a new indicator shows when one app controls another",
+            "Backup and assistive apps can request entitlements to keep existing Full Disk Access behaviour"
+          ],
+          "url": "https://techcrunch.com/2026/11/16/apple-reveals-new-mac-security-controls-as-ai-agents-raise-privacy-risks/",
+          "update": false
+        }
+      ]
+    },
+    {
+      "name": "Australia & fintech",
+      "stories": [
+        {
+          "headline": "ANZ moved a 1.7PB Hadoop platform to AWS in six months using AI agents",
+          "points": [
+            "On-prem Cloudera Hadoop to Amazon EMR: 300 million files, 142,000 tables and 4,500 automated workflows, mostly lift-and-shift",
+            "Expected to take 18 months; ANZ says coding and troubleshooting agents cut effort by about 35% and halved defects and rework",
+            "Sensitive data was tokenised before the move; tokenisation running costs fell from over US$10k a day to under US$3k a month"
+          ],
+          "url": "https://www.itnews.com.au/news/anz-uses-ai-to-move-17pb-data-platform-to-aws-630399",
+          "update": false
+        }
+      ]
+    },
+    {
+      "name": "Gaming & modding",
+      "stories": [
+        {
+          "headline": "Firaxis cuts about a third of its staff",
+          "points": [
+            "Take-Two's Civilization and XCOM studio is reportedly laying off roughly a third of employees",
+            "The studio head is also leaving"
+          ],
+          "url": "https://www.bloomberg.com/news/articles/2026-11-17/take-two-s-firaxis-maker-of-civilization-cuts-a-third-of-its-staff",
+          "update": false
+        }
+      ]
+    }
+  ],
+  "read": {
+    "title": "World's largest brands infected with malware via Optimizely",
+    "why": "Scott Helme's 15-minute teardown of the attack: timeline, payload behaviour, and how a Content Security Policy would have caught it.",
+    "url": "https://blog.report-uri.com/worlds-largest-brands-infected-with-malware-via-optimizely/"
+  }
+}
