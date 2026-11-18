@@ -14,6 +14,7 @@ on:
       - "favicon.svg"
       - "posts/**"
       - "images/**"
+      - "briefing/**"
       - "games/frontend/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
@@ -50,7 +51,7 @@ jobs:
         run: |
           mkdir -p /tmp/site
           cp index.html about.html projects.html style.css favicon.svg /tmp/site/
-          cp -r posts images /tmp/site/
+          cp -r posts images briefing /tmp/site/
           cp -r games/frontend/dist /tmp/site/games
 
       - name: Deploy to gh-pages

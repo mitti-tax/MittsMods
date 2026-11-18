@@ -33,6 +33,7 @@ MittsMods/
 ├── about.html          # About page
 ├── projects.html       # Projects / blog listing
 ├── style.css           # Shared stylesheet
+├── briefing/           # Morning briefing page; data/YYYY-MM-DD.json written daily by a scheduled task
 ├── games/
 │   ├── backend/        # ASP.NET Core API
 │   └── frontend/       # React + Vite app
